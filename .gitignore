@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+*.aux
+*.log
+*.out
+venv/
+.venv/
+.env
+data_raw/
+results/equity_curves.png
