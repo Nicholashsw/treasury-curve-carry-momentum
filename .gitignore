@@ -10,3 +10,20 @@ venv/
 .env
 data_raw/
 results/equity_curves.png
+
+# Carry extension (branch carry-extension-2026-08): notebook scratch output.
+# carry/src/canonical.py redirects the canonical notebook's BBG_RESULTS here so a
+# carry run can never overwrite the canonical results/ directory.
+carry/results/_nb_scratch/
+
+# Carry extension: carry_signal_curve.csv is EXACTLY DV01 x 100 x [(y-rf)h + (y-y_roll)].
+# All yields in that bracket are public (FRED), so the file lets anyone back out Bloomberg's
+# CONVENTIONAL_CTD_FORWARD_FRSK to 0.000000% error. Per DATA.md that field cannot be
+# redistributed. Regenerate locally with: python carry/src/run_experiments.py
+carry/results/carry_signal_curve.csv
+
+# Carry extension: internal full-width pipeline outputs. run_experiments.py writes
+# all 25 book-return series here for diagnostics.py / final_tests.py / make_figs.py,
+# and publishes only the 7 verification columns to carry/results/book_returns_daily.csv
+# so a reproduction run leaves the working tree clean.
+carry/results/_internal/

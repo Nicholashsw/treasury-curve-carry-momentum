@@ -1,0 +1,17 @@
+test,vs,dm,p,ann_edge,sharpe_alt,sharpe_base,fdr_pass_5pct
+A1_carry_ts,momentum,-4.123,0.0,-15.35,-0.925,0.679,True
+A2_carry_xs,momentum,-2.892,0.0038,-7.95,0.021,0.679,True
+A2_carrycurve_xs,momentum,-2.278,0.0228,-6.08,0.838,0.679,True
+B1_mom_gated,momentum,-2.757,0.0059,-8.06,-0.006,0.679,True
+B2_mom_tilted,momentum,-0.536,0.5923,-0.71,0.536,0.679,False
+C1_2s10s_gated,2s10s,-4.115,0.0,-13.24,-0.294,0.715,True
+C2_2s10s_tilt0.25,2s10s,0.479,0.6318,0.37,0.706,0.715,False
+C2_2s10s_tilt0.5,2s10s,0.103,0.9181,0.15,0.659,0.715,False
+C2_2s10s_tilt1.0,2s10s,-1.871,0.0614,-4.25,0.415,0.715,False
+C1_5s30s_gated,5s30s,-3.816,0.0001,-13.42,-0.27,0.664,True
+C2_5s30s_tilt0.25,5s30s,-1.284,0.199,-1.26,0.591,0.664,False
+C2_5s30s_tilt0.5,5s30s,-1.312,0.1895,-2.52,0.493,0.664,False
+C2_5s30s_tilt1.0,5s30s,-1.782,0.0749,-5.55,0.303,0.664,False
+D1_fly_carry,butterfly,-2.371,0.0178,-12.82,-0.801,0.076,True
+D2_fly_gated,butterfly,-2.794,0.0052,-7.9,-0.471,0.076,True
+G_equal_3sleeve,2sleeve_baseline,-1.344,0.1791,-1.56,0.714,0.871,False

@@ -5,9 +5,11 @@ futures curve strategies, 2010–2026.
 
 > **Scope.** This study implements and reports **time-series momentum on outright duration** and
 > **mean-reversion on DV01-neutral curve spreads** (2s10s, 5s30s, 2s5s10s). A *carry* strategy is
-> **not** implemented here. Carry and policy-path work is scoped in
-> `bloomberg/EXPORT_CHECKLIST.md` (fed funds futures, SOFR/OIS and swap curves) as future work; the
-> published pipeline does not open those inputs. The repository slug still reads
+> **not part of the headline result**: it was tested separately, under a protocol fixed before the
+> results were run, and it failed — see [Carry extension](#carry-extension--a-documented-null)
+> below. Policy-path work (fed funds futures, SOFR/OIS and swap curves) remains scoped in
+> `bloomberg/EXPORT_CHECKLIST.md` as future work; the published pipeline does not open those
+> inputs. The repository slug still reads
 > `treasury-curve-carry-momentum` for link stability.
 
 Hong Si Wei Nicholas · Nanyang Technological University
@@ -75,6 +77,7 @@ scripts/     make_figures.py                 redraws the figures from that same 
 paper/       IEEE-format paper (PDF + LaTeX source)
 results/     figures + exported macro regime series
 bloomberg/   VBA exporters and the export checklist (how to pull the inputs yourself)
+carry/       carry extension: protocol, results, figures and reproduction code
 DATA.md      input schema, tickers, and the free-data route
 ```
 
@@ -132,6 +135,39 @@ settle/volume/open interest).
   before treating the curve results as a hard performance claim.**
 - Single-country, single-currency; costs are a one-tick-per-side approximation
   omitting market impact and financing.
+
+## Carry extension — a documented null
+
+Carry is the obvious third premium in this literature, and this repository originally scoped it as
+future work. It was tested. **It failed, and it is not part of the headline result.**
+
+The protocol, acceptance criteria and instrument-inclusion rule were fixed in a commit that
+precedes the results commit, so the bar can be audited rather than taken on trust:
+
+```
+a3d7f83  field feasibility, carry definition, and research protocol   <- criteria fixed here
+d1ab1e7  implementation and results - carry fails the protocol
+```
+
+| Test | Bar | Result | |
+|---|---|---|---|
+| Standalone carry (DV01-neutral, cross-sectional) | Sharpe > 0.4, NW-t > 2.0 | **0.021**, NW-t **0.09** | fails |
+| Spanning alpha vs momentum + 2s10s + 5s30s | positive, HAC t > 2.0 | **−0.20%/yr**, t **−0.66** | fails |
+| Added as a third portfolio sleeve | ≥ +0.10 Sharpe | **0.871 → 0.714**, drawdown **−15.1% → −21.1%** | fails |
+
+**Why it fails is the interesting part.** Cross-sectional bond-futures carry is largely a duration
+ranking in disguise — the rank correlation between carry and DV01 is **+0.51**, and mean carry rises
+monotonically with tenor. In an upward-sloping curve "high carry" mechanically means "long
+duration". DV01-neutralise the book, as the protocol requires, and roughly 85% of its volatility
+disappears with the duration bet; what remains has no alpha.
+
+A secondary cash-curve carry measure does score 0.84, but it holds the same two long-end contracts
+on ~87% of days and turns over 1.3 times a year. It is a near-static long-end-versus-short-end
+position, not a working dynamic carry signal, and it is reported as such rather than promoted.
+
+Full write-up, including the cheapest-to-deliver diagnostic behind the instrument-inclusion rule and
+a DV01-neutrality bug that had quietly turned the first implementation into a duration bet:
+**[`carry/CARRY_RESULTS.md`](carry/CARRY_RESULTS.md)**.
 
 ## Correction (2026-08-23)
 
