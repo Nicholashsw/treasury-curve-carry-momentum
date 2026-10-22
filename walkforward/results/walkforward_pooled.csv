@@ -1,0 +1,3 @@
+spread,test_window,oos_sharpe,duration_mom_sharpe,dm_stat,dm_p,dm_ann_edge,n_days,positive_regimes,reference_rev252_oos_sharpe,supported
+2s10s,2015-2026 pooled,0.8708,0.7431,0.9519,0.3412,0.0415,2887,3,0.8874,True
+5s30s,2015-2026 pooled,0.6926,0.7431,0.612,0.5406,0.0329,2888,3,0.8496,True

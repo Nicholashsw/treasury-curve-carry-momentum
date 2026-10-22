@@ -78,6 +78,8 @@ paper/       IEEE-format paper (PDF + LaTeX source)
 results/     figures + exported macro regime series
 bloomberg/   VBA exporters and the export checklist (how to pull the inputs yourself)
 carry/       carry extension: protocol, results, figures and reproduction code
+walkforward/ pre-registered regime walk-forward of the curve signals, code and result tables
+cross_country/ cross-country rates relative value (US, DE, JP, CA): code, public-data cache, results
 DATA.md      input schema, tickers, and the free-data route
 ```
 
@@ -128,11 +130,39 @@ tickers and the plain `Date,FIELD` schema the notebook expects, which also accep
 substitutes (FRED `DGS2/5/10/30` for the cash curve, any futures source with
 settle/volume/open interest).
 
+## Across countries
+
+The same regime question, asked of the US, German, Japanese and Canadian government curves,
+lives in `cross_country/`. It uses the four policy regimes of the walk-forward above, and it
+runs from that folder on public data. Across the full sample, none of the candidate pairs is
+cointegrated. Inside single regimes some relationships do appear, and a few survive false
+discovery control. Fitted in one regime and traded in the next, they lose money on average.
+Currency moves explain almost none of the P&L (R² at most 0.0074). Within-regime
+cointegration describes the regime it was found in and does not predict the next one.
+Details are in `cross_country/FINDINGS.md`.
+
+| Test | Result |
+|---|---|
+| Full sample, 2010-2026 | 0 of 18 pairs cointegrated |
+| Within policy regimes | 11 of 144 pass, 6 survive FDR |
+| Fit in one regime, trade the next | mean Sharpe −0.27, positive in 5 of 12 |
+
+![Out-of-regime test](cross_country/results/grrv_fig3_out_of_regime.png)
+
+Limitation: daily closes are asynchronous across Tokyo, Europe and New York; weekly sampling
+is the fix.
+
 ## Known limitations
 
-- The mean-reversion direction for the curve is economically motivated but was
-  confirmed on the full sample. **A walk-forward out-of-sample test is required
-  before treating the curve results as a hard performance claim.**
+- The mean-reversion direction for the curve was first confirmed on the full sample. A
+  pre-registered walk-forward test (`walkforward/PREREG.md`) now fits the direction and the
+  z-score lookback in one policy regime and trades them in the next, over the same four
+  regimes as global-rates-rv. Mean-reversion was chosen in all six fits, and both spreads are
+  positive in all three test regimes: 2s10s net Sharpe 0.89 / 0.93 / 0.85, pooled 0.87 over
+  2015-2026; 5s30s 0.77 / 1.28 / 0.38, pooled 0.69. Duration momentum earns 0.74 on the same
+  dates, and Diebold-Mariano against it is not significant (2s10s DM 0.95, p 0.34; 5s30s DM
+  0.61, p 0.54). So the curve result holds out of sample, but it still does not demonstrably
+  beat outright momentum. Tables in `walkforward/results/`.
 - Single-country, single-currency; costs are a one-tick-per-side approximation
   omitting market impact and financing.
 
@@ -232,6 +262,6 @@ source as-is.
 
 ## Related
 
-[`global-rates-rv`](https://github.com/Nicholashsw/global-rates-rv) — cross-country extension using the same
-shared research core. Currently a negative result: cross-country yield spreads are
-not cointegrated out-of-regime.
+[`cross_country/`](cross_country/) holds the cross-country extension, formerly the separate
+global-rates-rv repository. It is a negative result: cross-country yield spreads are not
+cointegrated out of regime (see [Across countries](#across-countries)).

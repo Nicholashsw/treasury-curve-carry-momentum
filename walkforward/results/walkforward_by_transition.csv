@@ -1,0 +1,7 @@
+spread,fit_regime,test_regime,direction,lookback,fit_sharpe,oos_sharpe,duration_mom_sharpe,dm_stat,dm_p,dm_ann_edge,n_days,reference_rev252_oos_sharpe
+2s10s,R1 post-GFC QE,R2 divergence/NIRP,reversion,252,0.316,0.8912,1.2242,-0.2272,0.8203,-0.0153,1254,0.8912
+2s10s,R2 divergence/NIRP,R3 COVID,reversion,504,1.0308,0.9248,0.699,0.2546,0.7991,0.0243,506,1.0736
+2s10s,R3 COVID,R4 hiking/normalisation,reversion,252,1.0736,0.8487,0.0959,1.6127,0.1071,0.1125,1127,0.8487
+5s30s,R1 post-GFC QE,R2 divergence/NIRP,reversion,63,0.3283,0.7669,1.2242,0.0398,0.9682,0.004,1255,0.8017
+5s30s,R2 divergence/NIRP,R3 COVID,reversion,504,1.0112,1.2821,0.699,0.9113,0.3626,0.0869,506,1.2883
+5s30s,R3 COVID,R4 hiking/normalisation,reversion,63,1.4027,0.3781,0.0959,0.5922,0.5538,0.0409,1127,0.8063
