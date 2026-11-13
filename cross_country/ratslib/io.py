@@ -87,35 +87,6 @@ def load_static(data_dir, stem, log=None):
     return df
 
 
-def load_dv01(data_dir, root, calendar=None,
-              field="CONVENTIONAL_CTD_FORWARD_FRSK", min_obs=252):
-    """Daily forward DV01. Prefers the standalone {root}_DV01.csv produced by the
-    single-field puller; falls back to a column inside the futures TS file.
-
-    (The single-field pull exists because bundling this field into a multi-field
-    BDH array hangs the request.)
-    """
-    p = find_csv(data_dir, f"{root}_DV01")
-    if p:
-        d = pd.read_csv(p)
-        d["Date"] = pd.to_datetime(d["Date"], errors="coerce")
-        d = d.dropna(subset=["Date"]).set_index("Date").sort_index()
-        if field in d.columns:
-            s = pd.to_numeric(d[field], errors="coerce")
-            if calendar is not None:
-                s = s.reindex(calendar)
-            if s.notna().sum() > min_obs:
-                return s
-    ts = load_timeseries(data_dir, root)
-    if ts is not None and field in ts.columns:
-        s = pd.to_numeric(ts[field], errors="coerce")
-        if calendar is not None:
-            s = s.reindex(calendar)
-        if s.notna().sum() > min_obs:
-            return s
-    return None
-
-
 # ============================================================ free sources
 _LAST_CALL = {"t": 0.0}
 _MIN_INTERVAL = 1.2          # be polite: public endpoints rate-limit bursts
@@ -248,11 +219,6 @@ def bank_of_canada(timeout=45, start="2009-01-01"):
         df["value"] = pd.to_numeric(df["value"], errors="coerce")
         out[label] = df.dropna(subset=["date"]).set_index("date")["value"]
     return pd.DataFrame(out).sort_index()
-    """US constant-maturity yields from FRED -> DataFrame (cols '2Y'...)."""
-    out = {}
-    for t in tenors:
-        out[f"{t}Y"] = fred(f"DGS{t}", timeout=timeout)
-    return pd.DataFrame(out).sort_index()
 
 
 def ecb_fx(currency="USD", denom="EUR", start="2009-01-01", timeout=45):
@@ -300,18 +266,3 @@ def fx_panel(start="2009-01-01", timeout=45):
     except Exception:                                    # noqa: BLE001
         pass
     return pd.DataFrame(out).sort_index()
-
-
-def fx_spot(pair="USDJPY", timeout=45):
-    """Daily FX from FRED. Returned as UNITS OF FOREIGN CURRENCY PER USD so all
-    pairs share one convention (DEXUSEU is quoted USD per EUR, so it is inverted)."""
-    mapping = {"USDJPY": ("DEXJPUS", False), "USDEUR": ("DEXUSEU", True),
-               "USDGBP": ("DEXUSUK", True), "USDCAD": ("DEXCAUS", False),
-               "USDAUD": ("DEXUSAL", True), "USDSGD": ("DEXSIUS", False)}
-    if pair not in mapping:
-        raise ValueError(f"unknown pair {pair}")
-    sid, invert = mapping[pair]
-    s = fred(sid, timeout=timeout)
-    if invert:
-        s = 1.0 / s
-    return s.rename(pair)

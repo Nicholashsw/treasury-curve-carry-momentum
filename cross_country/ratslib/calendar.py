@@ -8,17 +8,6 @@ trading calendar as the master and inner-join everything onto it.
 import pandas as pd
 
 
-def master_calendar(*series_or_frames):
-    """Intersection of the indices of everything passed in."""
-    idx = None
-    for s in series_or_frames:
-        if s is None or len(s) == 0:
-            continue
-        i = s.index
-        idx = i if idx is None else idx.intersection(i)
-    return idx if idx is not None else pd.DatetimeIndex([])
-
-
 def align(frames: dict, calendar, how="inner", min_coverage=0.0):
     """Reindex a dict of Series/DataFrames onto `calendar`.
 
@@ -46,11 +35,3 @@ def panel(series_map: dict, calendar=None, dropna_how="all"):
     if calendar is not None:
         df = df.reindex(calendar)
     return df.dropna(how=dropna_how)
-
-
-def common_span(df, min_obs=250):
-    """Trim to the span where all columns have data (for fair cross-market work)."""
-    d = df.dropna()
-    if len(d) < min_obs:
-        return df.dropna(how="all")
-    return df.loc[d.index.min():d.index.max()]

@@ -83,8 +83,3 @@ def summary(r, turnover=None, n_trades=None, avg_hold=None):
     if avg_hold is not None:
         out["avg_hold_days"] = avg_hold
     return out
-
-
-def summary_frame(results: dict) -> pd.DataFrame:
-    """results: {name: dict-from-summary} -> tidy DataFrame."""
-    return pd.DataFrame(results).T

@@ -47,24 +47,6 @@ def hedge_ratio(dv01_short, dv01_long, lo=0.1, hi=10.0, lag=1):
     return r.shift(lag).clip(lo, hi)
 
 
-def dv01_neutral_weights(dv01_map: dict, structure="spread", lag=1):
-    """Weights for a DV01-neutral book.
-
-    structure='spread'    : {'long': +1, 'short': -h}
-    structure='butterfly' : belly +2, wings -h_each  (2s5s10s style)
-
-    dv01_map keys must be 'long'/'short' or 'belly'/'wing_lo'/'wing_hi'.
-    """
-    if structure == "spread":
-        h = hedge_ratio(dv01_map["short"], dv01_map["long"], lag=lag)
-        return pd.DataFrame({"long": 1.0, "short": -h})
-    if structure == "butterfly":
-        h_lo = hedge_ratio(dv01_map["wing_lo"], dv01_map["belly"], lag=lag)
-        h_hi = hedge_ratio(dv01_map["wing_hi"], dv01_map["belly"], lag=lag)
-        return pd.DataFrame({"belly": 2.0, "wing_lo": -h_lo, "wing_hi": -h_hi})
-    raise ValueError(structure)
-
-
 def yield_implied_return(yield_series, duration_years, dv01_per_100=None):
     """Approximate total return of a constant-maturity bond position from yield
     changes alone: r ~= -D * dy  (dy in decimal).
