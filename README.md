@@ -89,9 +89,9 @@ The mean-reversion direction for the curve was first confirmed on the full sampl
 test then fitted the direction and the z-score lookback in one policy regime and traded them in
 the next, over the same four regimes as the cross-country study. Mean-reversion was chosen in
 all six fits, and both spreads are positive in all three test regimes: 2s10s net Sharpe 0.89 /
-0.92 / 0.85, pooled 0.87 over 2015-2026; 5s30s 0.77 / 1.28 / 0.38, pooled 0.69. Its plan is in
-`walkforward/PREREG.md`; the plan and the results share one commit, so the history does not show
-which came first. Tables are in `walkforward/results/`.
+0.92 / 0.85, pooled 0.87 over 2015-2026; 5s30s 0.77 / 1.28 / 0.38, pooled 0.69. The carry study was
+pre-registered; the walk-forward test was not. Its notes are in `walkforward/PREREG.md` and its
+tables in `walkforward/results/`.
 
 ## What didn't work
 
@@ -213,7 +213,7 @@ DATA.md      input schema, tickers, and the free-data route
 - Single country, single currency; costs are a one-tick-per-side approximation omitting market
   impact and financing, and they understate the 2-year note's cost before 2019.
 - The curve direction was first confirmed on the full sample; the walk-forward checks it out of
-  sample, but its plan and results share one commit.
+  sample, but it was not pre-registered.
 
 ## Correction (2026-08-23)
 
