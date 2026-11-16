@@ -24,6 +24,12 @@ carry/results/carry_signal_curve.csv
 
 # Carry extension: internal full-width pipeline outputs. run_experiments.py writes
 # all 25 book-return series here for diagnostics.py / final_tests.py / make_figs.py,
-# and publishes only the 7 verification columns to carry/results/book_returns_daily.csv
-# so a reproduction run leaves the working tree clean.
+# and the 7 verification columns to carry/results/book_returns_daily.csv (ignored below).
 carry/results/_internal/
+
+# Day-by-day series computed from the licensed Bloomberg exports. They stay on the local
+# disk and are not published. The notebook rewrites results/macro_regime.csv;
+# carry/src/run_experiments.py rewrites the two carry files.
+results/macro_regime.csv
+carry/results/carry_signal_kmpv.csv
+carry/results/book_returns_daily.csv
