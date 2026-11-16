@@ -48,8 +48,8 @@ remains an open, worthwhile pair — it needs correct BoE series codes.
 from the Bank of Canada Valet API, 2009-01-02 → 2026-07-28. FRED was rate-limited in
 this environment, so those two endpoints were used instead. Contamination was measured
 directly: regressing each survivor's net return on the relevant currency pair gives
-**R² of at most 0.0016** (US2s10s/CA2s10s 0.00041, DE5Y/CA5Y 0.00030, JP2s10s/CA2s10s
-0.00030, DE10Y/CA10Y 0.00164). The negative result is a rates finding, not a currency
+**R² of at most 0.0074** across the 11 rows of `results/fx_contamination.csv` (DE5Y/JP5Y
+0.0074 and US2Y/CA2Y 0.0069 in 2015-2019; the other nine are below 0.002). The negative result is a rates finding, not a currency
 artifact.
 
 > Re-run on 22 October 2026 with `scripts/make_tables.py`, which regresses every in-regime
@@ -166,7 +166,7 @@ itself evidence of fragility**, and the out-of-regime test above is the honest v
 **Not supported (do not claim):**
 - Any tradable cross-country RV strategy. Nothing here clears out-of-sample.
 - Any P&L number as realistic — FX hedging cost is not modelled and costs are a flat
-  proxy. FX *contamination* has been measured (R² ≤ 0.0016) and is negligible; FX
+  proxy. FX *contamination* has been measured (R² ≤ 0.0074) and is negligible; FX
   *carry* has not.
 
 ---

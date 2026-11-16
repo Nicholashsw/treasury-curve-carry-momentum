@@ -30,24 +30,27 @@ a DV01-scaled 2-year leg. Only the signal differs:
 | Signal on the identical 2s10s book | Net Sharpe |
 |---|---|
 | Momentum | **−0.79** |
-| Mean-reversion | **+0.71** |
+| Mean-reversion | **+0.72** |
 
-The book's P&L has a regression slope of −0.001 on the 10-year yield change, i.e.
-it is genuinely duration-neutral. The gap is signal, not hedge error.
+A regression of the book's daily P&L on the daily change in the 10-year yield gives a
+slope of about −0.001, so the book is close to duration-neutral and the gap comes from the
+signal. No script in the repository stores that regression.
 
-## Results (2010–2026, net of costs, vol-scaled to 10%)
+## Results (2010–2026, net of costs, 10% volatility target)
 
 | Strategy | Sharpe | Max DD | Turnover/yr |
 |---|---|---|---|
 | Duration momentum (baseline) | 0.68 | −23% | 22 |
-| 2s10s mean-reversion | 0.71 | −20% | 104 |
+| 2s10s mean-reversion | 0.72 | −20% | 104 |
 | 5s30s mean-reversion | 0.66 | −27% | 68 |
-| 2s5s10s butterfly | 0.07 | −38% | 87 |
+| 2s5s10s butterfly | 0.08 | −38% | 87 |
 
 ![Equity curves](results/fig2_equity_curves.png)
 
-Against the baseline, HAC Diebold–Mariano gives DM = 0.83 (p = 0.41) for 2s10s and
-0.68 (p = 0.49) for 5s30s. **Neither is statistically significant.** The honest
+Realised volatility of the net returns runs from 11.8% to 16.1%, above the 10% target.
+
+Against the baseline, HAC Diebold–Mariano gives DM = 0.84 (p = 0.40) for 2s10s and
+0.69 (p = 0.49) for 5s30s. **Neither is statistically significant.** The honest
 reading: outright duration momentum is the workhorse, curve mean-reversion is a
 legitimate and roughly co-equal source of return that does not demonstrably beat
 it, and the butterfly is not supported.
@@ -61,13 +64,14 @@ it, and the butterfly is not supported.
   regression proxy.
 - **No lookahead**: signals use t−1 data, execution at t settle, monthly rebalance,
   126-day warm-up, leverage capped at 3×.
-- **Costs**: one tick per contract per side, using each contract's own tick size
-  from the `*_STATIC` export (the 10-year tick was halved during the sample). The
-  same cost model drives the table above and every figure — see the correction below.
+- **Costs**: one tick per contract per side. The code applies each root's most recent
+  tick size and settle price from the `*_STATIC` export to the whole sample. That
+  understates the 2-year note's cost before 2019, when its tick was twice as large; the
+  other contracts' ticks did not change during the sample. The same cost model drives the
+  table above and every figure (see the correction below).
 - **Inference**: Diebold–Mariano with Newey–West (Bartlett) long-run variance at a
   21-day lag spanning the holding period, plus the Harvey–Leybourne–Newbold
-  small-sample correction. Cross-checked against a HAC-robust OLS of the
-  differential on a constant; statistics agree to two decimals.
+  small-sample correction.
 
 ## Repository layout
 
@@ -75,10 +79,10 @@ it, and the butterfly is not supported.
 notebooks/   treasury_curve_pipeline.ipynb   runs top-to-bottom from a folder of CSVs
 scripts/     make_figures.py                 redraws the figures from that same run
 paper/       IEEE-format paper (PDF + LaTeX source)
-results/     figures + exported macro regime series
+results/     figures
 bloomberg/   VBA exporters and the export checklist (how to pull the inputs yourself)
 carry/       carry extension: protocol, results, figures and reproduction code
-walkforward/ pre-registered regime walk-forward of the curve signals, code and result tables
+walkforward/ regime walk-forward of the curve signals: plan, code and result tables
 cross_country/ cross-country rates relative value (US, DE, JP, CA): code, public-data cache, results
 DATA.md      input schema, tickers, and the free-data route
 ```
@@ -103,11 +107,10 @@ no manual steps.
 
 **The committed notebook is source only: it ships deliberately with no stored cell outputs.**
 Executing it requires the licensed Bloomberg CSV exports, and saved outputs would embed that
-vendor data in a public repository. It is a reproduction notebook, not an executed record. The
-numbers in the tables above were produced by running it locally against the original exports on
-2026-08-21 and again on 2026-08-23; both runs reproduced every figure exactly (Sharpe 0.68 / 0.71 /
-0.66 / 0.07; DM 0.83 p 0.405, 0.68 p 0.494). To reproduce them yourself you need terminal access, or
-the free-data route in `DATA.md`.
+vendor data in a public repository. The numbers in the tables above are from a run on
+17 November 2026 against those exports. Two of them sit on a rounding boundary: the 2s10s Sharpe
+is 0.7150 and the butterfly 0.0755, and the August 2026 runs behind the paper printed 0.71 and
+0.07. To reproduce them yourself you need terminal access, or the free-data route in `DATA.md`.
 
 Regenerate the figures from the same run with:
 
@@ -155,10 +158,11 @@ is the fix.
 ## Known limitations
 
 - The mean-reversion direction for the curve was first confirmed on the full sample. A
-  pre-registered walk-forward test (`walkforward/PREREG.md`) now fits the direction and the
-  z-score lookback in one policy regime and trades them in the next, over the same four
-  regimes as global-rates-rv. Mean-reversion was chosen in all six fits, and both spreads are
-  positive in all three test regimes: 2s10s net Sharpe 0.89 / 0.93 / 0.85, pooled 0.87 over
+  walk-forward test now fits the direction and the z-score lookback in one policy regime and
+  trades them in the next, over the same four regimes as the cross-country study. Its plan is
+  in `walkforward/PREREG.md`; the plan and the results share one commit, so the history does
+  not show which came first. Mean-reversion was chosen in all six fits, and both spreads are
+  positive in all three test regimes: 2s10s net Sharpe 0.89 / 0.92 / 0.85, pooled 0.87 over
   2015-2026; 5s30s 0.77 / 1.28 / 0.38, pooled 0.69. Duration momentum earns 0.74 on the same
   dates, and Diebold-Mariano against it is not significant (2s10s DM 0.95, p 0.34; 5s30s DM
   0.61, p 0.54). So the curve result holds out of sample, but it still does not demonstrably
@@ -171,13 +175,12 @@ is the fix.
 Carry is the obvious third premium in this literature, and this repository originally scoped it as
 future work. It was tested. **It failed, and it is not part of the headline result.**
 
-The protocol, acceptance criteria and instrument-inclusion rule were fixed in a commit that
-precedes the results commit, so the bar can be audited rather than taken on trust:
-
-```
-a3d7f83  field feasibility, carry definition, and research protocol   <- criteria fixed here
-d1ab1e7  implementation and results - carry fails the protocol
-```
+The protocol, acceptance criteria and instrument-inclusion rule were written before the
+results. In the original commit history the research plan, with the bars in the table below,
+was committed at 14:24 on 24 August 2026 with no implementation, and the implementation and
+results at 20:57 the same day. That history was squashed when the repository was cleaned on
+13 November 2026. The plan and the results now share commit `5836a04`, so the order cannot be
+checked from this repository; the original commits are kept offline.
 
 | Test | Bar | Result | |
 |---|---|---|---|
@@ -186,10 +189,12 @@ d1ab1e7  implementation and results - carry fails the protocol
 | Added as a third portfolio sleeve | ≥ +0.10 Sharpe | **0.871 → 0.714**, drawdown **−15.1% → −21.1%** | fails |
 
 **Why it fails is the interesting part.** Cross-sectional bond-futures carry is largely a duration
-ranking in disguise — the rank correlation between carry and DV01 is **+0.51**, and mean carry rises
-monotonically with tenor. In an upward-sloping curve "high carry" mechanically means "long
-duration". DV01-neutralise the book, as the protocol requires, and roughly 85% of its volatility
-disappears with the duration bet; what remains has no alpha.
+ranking in disguise: the rank correlation between carry and DV01 is **+0.51**, and mean carry rises
+with tenor overall, though not at every step (TU 0.22, FV 0.90, TY 1.33, UXY 0.49, US 2.46,
+WN 1.28, in percent). In an upward-sloping curve "high carry" mechanically means "long
+duration". DV01-neutralise the book, as the protocol requires, and its volatility is 1.6%. The
+first implementation, which was not neutral, ran at about 11%; that version is no longer in
+the code. What remains has no alpha.
 
 A secondary cash-curve carry measure does score 0.84, but it holds the same two long-end contracts
 on ~87% of days and turns over 1.3 times a year. It is a near-static long-end-versus-short-end
@@ -211,7 +216,7 @@ the figures inherited the same zero cost because the figure script calls the not
 own `tick_frac()`.
 
 The glob now accepts both filenames. With costs actually applied — one tick per contract
-per side at each contract's own tick size, giving `cost_per_unit` between 0.000085 and
+per side at each root's most recent tick size, giving `cost_per_unit` between 0.000084 and
 0.000176 depending on the book — the results are:
 
 | Strategy | Originally published (cost-free) | Corrected (net of tick costs) |
@@ -226,8 +231,12 @@ per side at each contract's own tick size, giving `cost_per_unit` between 0.0000
 | DM 5s30s vs baseline | 0.89 (p 0.37) | **0.68 (p 0.49)** |
 | DM butterfly vs baseline | −1.44 (p 0.15) | **−1.53 (p 0.13)** |
 
-Turnover is unchanged (costs do not affect position sizing), as is
-`results/macro_regime.csv`.
+Turnover is unchanged (costs do not affect position sizing).
+
+A rerun on 17 November 2026 gives 0.72 for the 2s10s mean-reversion and 0.08 for the
+butterfly, both on a rounding boundary, and Diebold-Mariano statistics of 0.84 (p 0.40),
+0.69 (p 0.49) and −1.52 (p 0.13). The tables at the top of this README use the rerun values;
+the table above is the record of the August correction.
 
 **Every qualitative conclusion is unchanged.** The ranking of the four strategies is the
 same; neither curve trade is statistically distinguishable from the baseline, and both
@@ -241,7 +250,9 @@ reported (a 1.51 Sharpe gap on the identical book, against 1.50 before).
 `paper/treasury_curve_paper.tex`. The PDF now prints the net-of-cost numbers from the
 correction table above throughout — abstract, results table, Diebold--Mariano statistics
 and conclusion — and embeds the regenerated `results/fig*.png` figures, whose legends
-carry the same values. Nothing else in the paper changed.
+carry the same values. Nothing else in the paper changed. The PDF still prints the August
+values where the November rerun differs in the second decimal (Sharpe 0.71 and 0.07; DM 0.83,
+0.68 and −1.53).
 
 ### Building the paper
 

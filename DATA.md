@@ -103,9 +103,9 @@ already falls back to a rolling regression-beta hedge ratio when no `_DV01` file
 Running the notebook writes two files into `BBG_RESULTS`: `macro_regime.csv` and
 `equity_curves.png`.
 
-`results/macro_regime.csv` is the committed copy of the first — 4,173 rows, 2010-01-04 →
-2026-07-06, columns `Date`, `move_z`, `slope`, `slope_chg3m`, `regime`. It is a derived
-regime-label series, not vendor price data: `slope` is the 10Y−2Y yield spread, `slope_chg3m` its
+`macro_regime.csv` has 4,173 rows, 2010-01-04 → 2026-07-06, with columns `Date`, `move_z`,
+`slope`, `slope_chg3m`, `regime`. It is no longer committed, because it is a day-by-day series
+computed from the licensed exports: `slope` is the 10Y−2Y yield spread, `slope_chg3m` its
 63-day change, `move_z` a 252-day z-score of the MOVE index, and `regime` a three-state label
 (`flattening` 1,948 rows / `steepening` 1,454 / `stress` 771).
 

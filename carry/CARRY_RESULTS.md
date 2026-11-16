@@ -173,7 +173,8 @@ signal is not noise — it has information with the *wrong sign* over this sampl
 
 **(b) Cross-sectional bond carry is largely a duration ranking.** Mean cross-sectional Spearman
 between carry rank and DV01 rank is **+0.505**, above +0.5 on 62.4% of days, and mean carry rises
-monotonically with duration (TU +0.22% at DV01 1.84 → US +2.46% at 16.07). In an upward-sloping
+with duration overall, though not at every step (TU +0.22%, FV +0.90%, TY +1.33%, UXY +0.49%,
+US +2.46%, WN +1.28%). In an upward-sloping
 curve, "high carry" mechanically means "long duration". So an un-neutralised carry book is a
 duration bet — which is exactly the bug caught in §1.2, and which is why DV01-neutralising it
 collapses its volatility from 11% to 1.6%: **once you remove the duration bet, almost nothing is
@@ -276,8 +277,11 @@ The plan is left exactly as pre-specified; deviations are recorded here instead 
 | Per-side gross-*weight* normalisation | Per-side gross-*DV01* normalisation | The original left net +9.44 \$/bp of duration, contradicting the plan's DV01-neutral spec. Post-fix net DV01 = 2.8e-16. A bug fix, not a design change |
 
 No acceptance threshold, benchmark, subperiod split or test procedure was altered after results were
-seen. The protocol commit is `a3d7f83`; `git diff a3d7f83 -- carry/CARRY_RESEARCH_PLAN.md` shows a
-single clarifying line, and no acceptance threshold appears in it.
+seen. In the original history the plan was committed at 14:24 on 24 August 2026 and the results
+at 20:57; between the two the plan changed by one clarifying line and a wording change
+("pre-registered" to "pre-specified"), and no acceptance threshold appears in that diff. The
+history was squashed on 13 November 2026, so the plan and the results now share commit `5836a04`
+and this cannot be checked from the repository.
 
 ### Files intentionally not committed
 
@@ -285,14 +289,14 @@ single clarifying line, and no acceptance threshold appears in it.
 `DV01 x 100 x [(y - r_f)h + (y - y_roll)]`, and every yield in that bracket is publicly available,
 so the file permits exact recovery of Bloomberg's `CONVENTIONAL_CTD_FORWARD_FRSK` (verified: 0.000000%
 median error). `DATA.md` prohibits redistributing that field. Regenerate locally with
-`python3 carry/src/run_experiments.py`. The KMPV signal file *is* committed: `(F1-F2)/F2/dt` is one
-equation in two unknowns and identifies neither settle price.
+`python3 carry/src/run_experiments.py`. The KMPV signal file (`carry_signal_kmpv.csv`) was
+committed until 17 November 2026 and is now withheld too, as a day-by-day series computed from
+the licensed exports.
 
 `carry/results/book_returns_daily.csv` is a **7-column projection** of the 25 book-return series the
 pipeline produces, narrowed at write time. It carries every series needed to re-derive the headline
 numbers: `A1_carry_ts`, `A2_carry_xs` (primary), its `noUS` / `noWN` robustness cases,
 `A2_carrycurve_xs` (secondary), and the two portfolios `G_baseline_2sleeve_mom_2s10s` and
 `G_equal_3sleeve`. The full 25-column frame is written to `carry/results/_internal/` (gitignored),
-where `diagnostics.py`, `final_tests.py` and `make_figs.py` read it. Rerunning the pipeline
-regenerates the committed file byte-for-byte, so a successful reproduction leaves `git status`
-clean.
+where `diagnostics.py`, `final_tests.py` and `make_figs.py` read it. This file is also no
+longer committed, for the same reason as the KMPV signal file; the pipeline writes it locally.
