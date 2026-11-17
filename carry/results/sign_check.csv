@@ -1,0 +1,16 @@
+name,field,value
+rank_corr_carry_dv01,mean,0.5046
+rank_corr_carry_dv01,share_gt_0.5_pct,62.3772
+ic_spearman,TU,-0.2332
+ic_spearman,FV,-0.0918
+ic_spearman,TY,-0.0434
+ic_spearman,UXY,-0.2266
+ic_spearman,US,0.0202
+ic_spearman,WN,-0.0414
+ic_nw_t,TU,-5.12
+ic_nw_t,FV,-3.65
+ic_nw_t,TY,-1.41
+ic_nw_t,UXY,-2.33
+ic_nw_t,US,0.78
+ic_nw_t,WN,-2.22
+a2_book,net_dv01_per_unit_gross,-0.0

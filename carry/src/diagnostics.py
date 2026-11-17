@@ -42,10 +42,15 @@ sl = pd.DataFrame({"carry_kmpv":B["A2_carry_xs"],"carry_curve":B["A2_carrycurve_
                    "rev_5s30s":NS["curves"]["5s30s_reversion"]}).dropna()
 print(sl.corr().round(3).to_string())
 
+SUMMARY = [("top2_share_cash_curve_pct", r, v) for r, v in (100*(rk<=2).mean()).items()]
+SUMMARY.append(("a2_carrycurve_xs", "turnover_mean_abs_weight_change", chg.mean()))
+
 print("\n[7] SPANNING REGRESSION  carry ~ momentum + 2s10s + 5s30s   HAC(21)")
 for name in ("carry_kmpv","carry_curve"):
     tab,r2,n = E.hac_ols(sl[name], sl[["momentum","rev_2s10s","rev_5s30s"]], lag=21)
     a=tab.loc["alpha"]
+    SUMMARY += [(f"spanning_{name}", "alpha_pct_per_yr", 252*a.coef*100), (f"spanning_{name}", "t_hac", a.t_hac),
+                (f"spanning_{name}", "r2", r2)]
     print(f"  {name:12s} alpha={a.coef:+.3e}/day ({252*a.coef*100:+.2f}%/yr)  t_HAC={a.t_hac:+.2f}  R2={r2:.3f}  n={n}")
     print("      "+tab.round(3).to_string().replace("\n","\n      "))
 
@@ -78,4 +83,5 @@ print("    references to generic 3 in carry/src:", hits.strip() or "NONE")
 
 sl.corr().round(4).to_csv(os.path.join(RES,"sleeve_correlations.csv"))
 pd.DataFrame(rr).to_csv(os.path.join(RES,"regime_stability.csv"),index=False)
+pd.DataFrame(SUMMARY, columns=["name","field","value"]).round(4).to_csv(os.path.join(RES,"diagnostics_summary.csv"),index=False)
 print("\nwrote sleeve_correlations.csv, regime_stability.csv")

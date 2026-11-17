@@ -40,9 +40,18 @@ print("    mean carry and median DV01 by root:")
 for r in D.ROOTS:
     print(f"      {r:4s} mean carry {100*C[r].mean():+5.2f}%   median DV01 {D.dv01(r).median():6.2f}")
 
+SUMMARY = [("rank_corr_carry_dv01", "mean", per_day.mean()),
+           ("rank_corr_carry_dv01", "share_gt_0.5_pct", 100*(per_day>0.5).mean())]
+SUMMARY += [("ic_spearman", o["root"], o["spearman_IC"]) for o in out]
+SUMMARY += [("ic_nw_t", o["root"], o["nw_t"]) for o in out]
+
 print("\n[3] What is the A2 book actually holding? (average net weight per root)")
 import carry_positions as P
 pos = P.xs_positions(C, CAL, D.ROOTS)
 print(pos.mean().round(4).to_string())
 print(f"\n    -> mean DV01-weighted net duration of the book: "
       f"{float((pos*dv).sum(axis=1).mean()):+.3f} $/bp per unit gross")
+
+SUMMARY.append(("a2_book", "net_dv01_per_unit_gross", float((pos*dv).sum(axis=1).mean())))
+pd.DataFrame(SUMMARY, columns=["name","field","value"]).round(4).to_csv(
+    os.path.join(os.path.dirname(__file__), "..", "results", "sign_check.csv"), index=False)

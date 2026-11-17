@@ -1,0 +1,14 @@
+name,field,value
+top2_share_cash_curve_pct,TU,12.8445
+top2_share_cash_curve_pct,FV,12.3652
+top2_share_cash_curve_pct,TY,0.1438
+top2_share_cash_curve_pct,UXY,0.0
+top2_share_cash_curve_pct,US,87.1555
+top2_share_cash_curve_pct,WN,87.491
+a2_carrycurve_xs,turnover_mean_abs_weight_change,0.0077
+spanning_carry_kmpv,alpha_pct_per_yr,-0.1968
+spanning_carry_kmpv,t_hac,-0.6621
+spanning_carry_kmpv,r2,0.0443
+spanning_carry_curve,alpha_pct_per_yr,1.0906
+spanning_carry_curve,t_hac,2.5598
+spanning_carry_curve,r2,0.1672

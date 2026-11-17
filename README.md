@@ -78,7 +78,7 @@ Results, 2010 to 2026, net of costs, 10% volatility target:
 |---|---|---|---|
 | Duration momentum (baseline) | 0.68 | −23% | 22 |
 | 2s10s mean-reversion | 0.72 | −20% | 104 |
-| 5s30s mean-reversion | 0.66 | −27% | 68 |
+| 5s30s mean-reversion | 0.66 | −27% | 67 |
 | 2s5s10s butterfly | 0.08 | −38% | 87 |
 
 ![Equity curves](results/fig2_equity_curves.png)
@@ -125,7 +125,7 @@ the original commits are kept offline.
 | Added as a third portfolio sleeve | ≥ +0.10 Sharpe | **0.871 → 0.714**, drawdown **−15.1% → −21.1%** | fails |
 
 Cross-sectional bond-futures carry is largely a duration ranking in disguise: the rank
-correlation between carry and DV01 is +0.51, and mean carry rises with tenor overall, though not
+correlation between carry and DV01 is +0.50, and mean carry rises with tenor overall, though not
 at every step (TU 0.22, FV 0.90, TY 1.33, UXY 0.49, US 2.46, WN 1.28, in percent). In an
 upward-sloping curve "high carry" mechanically means "long duration". DV01-neutralise the book, as
 the protocol requires, and its volatility is 1.6%. The first implementation, which was not
@@ -243,8 +243,8 @@ record of the August correction.
 Every qualitative conclusion is unchanged. The ranking of the four strategies is the same;
 neither curve trade is statistically distinguishable from the baseline, and both p-values move
 further from significance; the butterfly remains unsupported; and the level-versus-spread
-asymmetry, the actual finding, is slightly wider than first reported (a 1.51 Sharpe gap on the
-identical book, against 1.50 before).
+asymmetry, the actual finding, is unchanged (a 1.51 Sharpe gap on the identical book, against
+1.51 before).
 
 ## Typeset PDF
 
