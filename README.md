@@ -237,8 +237,7 @@ the book) the results are:
 | DM 5s30s vs baseline | 0.89 (p 0.37) | **0.68 (p 0.49)** |
 | DM butterfly vs baseline | −1.43 (p 0.15) | **−1.53 (p 0.13)** |
 
-Turnover is unchanged (costs do not affect position sizing). The 5s30s and butterfly cost-free
-values and the 2s10s p-value 0.40 are from the current rerun.
+Turnover is unchanged (costs do not affect position sizing). Where a value in this table differs from the August run, it is from the current rerun.
 
 A rerun on 17 November 2026 gives 0.72 for the 2s10s mean-reversion and 0.08 for the butterfly,
 both on a rounding boundary, and Diebold-Mariano statistics of 0.84 (p 0.40), 0.69 (p 0.49) and
