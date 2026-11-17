@@ -73,6 +73,10 @@ for r in D.ROOTS:
     oi2 = pd.to_numeric(D.futures(r,2)["OPEN_INT"], errors="coerce").median()
     print(f"  {r:4s} g1 {oi1:12,.0f}   g2 {oi2:10,.0f}   ratio g2/g1 {oi2/oi1:6.3%}")
 
+jump = D.dv01("US").pct_change().abs()
+pd.DataFrame([("us_dv01", "max_jump_pct", 100*jump.max()), ("us_dv01", "max_jump_year", jump.idxmax().year),
+              ("us_dv01", "max_jump_month", jump.idxmax().month), ("us_dv01", "max_jump_day", jump.idxmax().day)],
+             columns=["name", "field", "value"]).round(4).to_csv(os.path.join(OUT, "us_diagnostic_dv01_jump.csv"), index=False)
 t1.to_csv(os.path.join(OUT, "us_diagnostic_spread_tails.csv"), index=False)
 byyear.to_csv(os.path.join(OUT, "us_diagnostic_by_year.csv"))
 print("\nwrote carry/results/us_diagnostic_*.csv")

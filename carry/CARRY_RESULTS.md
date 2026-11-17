@@ -45,9 +45,9 @@ Two corrections were made during implementation. Both are recorded because they 
 2. **DV01-neutrality bug, found and fixed before any conclusion was drawn.** The first
    cross-sectional implementation normalised *gross weight* per side rather than *gross DV01* per
    side. Because carry rises monotonically with duration, that left the book persistently long
-   duration — mean net **+9.44 $/bp** per unit gross — so it was a duration bet wearing a carry
+   duration — net long duration — so it was a duration bet wearing a carry
    label. The plan specifies DV01-neutral, so this was a deviation from spec, not a choice. After
-   the fix, net DV01 is 2.8e-16 (machine zero). All results below use the corrected book.
+   the fix, net DV01 is zero to machine precision. All results below use the corrected book.
 3. **Blend vol comparability.** Portfolio blends now scale every sleeve to a common 10% annualised
    vol before combining, so Sharpe *and* drawdown are comparable. Sharpe is scale-invariant; max
    drawdown is not.
@@ -55,9 +55,9 @@ Two corrections were made during implementation. Both are recorded because they 
 ## 2. US inclusion decision (fixed before any Sharpe was computed)
 
 **US RETAINED.** The anomaly is a single **cheapest-to-deliver migration**, 2014-12-22 → 2015-03-20
-(61 obs, 1.5% of sample, one contiguous episode), driven by the 30y yield falling 3.04% → 2.46% and
+(61 obs, 1.5% of sample, one contiguous episode), driven by a fall in the 30y yield and
 confirmed by the largest US DV01 jump in the sample (**+46.9%, 2015-03-23**) and a permanent DV01
-level shift 15.5 → 23.8. A root-agnostic guard (DV01-jump > 5%, or |spread − trailing median| >
+level shift. A root-agnostic guard (DV01-jump > 5%, or |spread − trailing median| >
 6 × trailing IQR, ±10bd buffer) restores comparability:
 
 | Criterion | Before | After | Panel reference |
@@ -177,7 +177,7 @@ with duration overall, though not at every step (TU +0.22%, FV +0.90%, TY +1.33%
 US +2.46%, WN +1.28%). In an upward-sloping
 curve, "high carry" mechanically means "long duration". So an un-neutralised carry book is a
 duration bet — which is exactly the bug caught in §1.2, and which is why DV01-neutralising it
-collapses its volatility from 11% to 1.6%: **once you remove the duration bet, almost nothing is
+collapses its volatility to 1.6%: **once you remove the duration bet, almost nothing is
 left.**
 
 ![Calendar-spread carry by root](figs/carry_fig2_distribution.png)
@@ -208,8 +208,8 @@ better, through a signal (mean-reversion) that adapts, where carry is close to s
 | Subperiod stability (primary) | +0.08 / +0.93 / −0.13 / **−0.82** — deteriorating, worst in 2022–26 |
 | Subperiod stability (secondary) | +0.25 / +1.60 / +0.77 / +0.60 — stable, consistent with a static position |
 | Cost sensitivity 1×/2×/3× | primary 0.021 / −0.047 / −0.114; secondary 0.838 / 0.829 / 0.820 |
-| Generic 3 | **Never used anywhere** in signal construction (median OI 2–15 contracts) |
-| Signal autocorrelation | 0.99 (1d), 0.83–0.94 (63d) — persistent, so turnover is low (6.9/yr) and cost is not the binding problem |
+| Generic 3 | **Never used anywhere** in signal construction |
+| Signal autocorrelation | 0.99 (1d), 0.41–0.86 (63d) — persistent, so turnover is low (6.9/yr) and cost is not the binding problem |
 | Calendar vs cash-curve carry correlation | 0.61–0.93 per root — same economic object, materially different implementations |
 | Multiple testing | 16 DM tests, 8 survive BH-FDR at 5%, all against carry |
 
@@ -239,7 +239,7 @@ The extension is worth keeping as a documented null, for three reasons:
 1. **It closes the open question the repo already names.** `EXPORT_CHECKLIST.md` scopes carry as
    future work; this tests it and reports that it does not survive.
 2. **The mechanism is a transferable finding.** "Cross-sectional bond-futures carry is a duration
-   ranking in disguise; DV01-neutralise it and 85% of its volatility disappears" is a specific,
+   ranking in disguise; DV01-neutralise it and most of its volatility disappears" is a specific,
    defensible statement, and the DV01-neutrality bug in §1.2 is a concrete demonstration of how
    easily a carry study becomes an unintentional duration bet.
 3. **The data verdict is reusable.** True CTD/implied-repo carry is not reconstructible from this
@@ -274,7 +274,7 @@ The plan is left exactly as pre-specified; deviations are recorded here instead 
 | `carry/CARRY_FINDINGS.md` (§8) — planned name for the results write-up | `carry/CARRY_RESULTS.md` | Renamed for consistency with the other `CARRY_*.md` documents. No change to content or verdict |
 | `carry/src/carry_backtest.py` (§8) — "experiments A–G on the canonical harness" | `carry/src/run_experiments.py` (experiments) + `carry/src/carry_positions.py` (position construction) | Split for testability. No change to method or to any acceptance criterion |
 | DV01 normalisation described in `CARRY_DESIGN.md` as part of the *signal* | Moved to *position construction*; signal definitions unchanged | The KMPV price-spread formula contains no DV01. Corrected before results were examined |
-| Per-side gross-*weight* normalisation | Per-side gross-*DV01* normalisation | The original left net +9.44 \$/bp of duration, contradicting the plan's DV01-neutral spec. Post-fix net DV01 = 2.8e-16. A bug fix, not a design change |
+| Per-side gross-*weight* normalisation | Per-side gross-*DV01* normalisation | The original left the book net long duration, contradicting the plan's DV01-neutral spec. Post-fix net DV01 is zero to machine precision. A bug fix, not a design change |
 
 No acceptance threshold, benchmark, subperiod split or test procedure was altered after results were
 seen. In the original history the plan was committed at 14:24 on 24 August 2026 and the results
@@ -287,8 +287,7 @@ and this cannot be checked from the repository.
 
 `carry/results/carry_signal_curve.csv` is withheld. It equals
 `DV01 x 100 x [(y - r_f)h + (y - y_roll)]`, and every yield in that bracket is publicly available,
-so the file permits exact recovery of Bloomberg's `CONVENTIONAL_CTD_FORWARD_FRSK` (verified: 0.000000%
-median error). `DATA.md` prohibits redistributing that field. Regenerate locally with
+so the file permits exact recovery of Bloomberg's `CONVENTIONAL_CTD_FORWARD_FRSK`. `DATA.md` prohibits redistributing that field. Regenerate locally with
 `python3 carry/src/run_experiments.py`. The KMPV signal file (`carry_signal_kmpv.csv`) was
 committed until 17 November 2026 and is now withheld too, as a day-by-day series computed from
 the licensed exports.

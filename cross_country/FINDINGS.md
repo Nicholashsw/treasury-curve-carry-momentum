@@ -13,7 +13,7 @@
 > repository. The US curve is now FRED `DGS2/5/10/30`. The aligned panel went from
 > 3,829 to 3,762 rows, and the headline numbers moved: raw regime passes 7 → 11, FDR
 > survivors 3 → 6, out-of-regime mean Sharpe −0.32 → −0.27, positive 2 of 12 → 5 of 12,
-> Canada in survivors 6 of 7 → 10 of 11, FX contamination R² max 0.0020 → 0.0016. Every
+> Canada in survivors 6 of 7 → 10 of 11. Every
 > conclusion below is unchanged. (The pre-rebuild text also stated "4 survive FDR" in
 > prose while its own tables said 3; the tables were right.)
 
@@ -86,7 +86,7 @@ the 81–1,035 days of the full sample:
 | DE5Y vs CA5Y | 2020–2021 | 0.15 | 0.0029 | 0.0379 | 10.5 | 0.27 | yes |
 | US2s10s vs CA2s10s | 2010–2014 | 1.12 | 0.0049 | 0.0475 | 25.1 | 0.39 | yes |
 | DE5Y vs JP5Y | 2015–2019 | 1.68 | 0.0049 | 0.0475 | 21.5 | 0.43 | yes |
-| DE10Y vs CA10Y | 2020–2021 | 0.26 | 0.0131 | 0.1000 | 10.8 | 0.30 | no |
+| DE10Y vs CA10Y | 2020–2021 | 0.25 | 0.0131 | 0.1000 | 10.8 | 0.30 | no |
 | US2Y vs CA2Y | 2015–2019 | 1.16 | 0.0213 | 0.1278 | 61.2 | 0.63 | no |
 | DE5s30s vs CA5s30s | 2022–2026 | 0.76 | 0.0348 | 0.1789 | 18.1 | 0.75 | no |
 | US10Y vs CA10Y | 2020–2021 | 0.93 | 0.0397 | 0.1879 | 13.8 | 0.10 | no |
@@ -139,7 +139,7 @@ exceptions are marginal: US2s10s/CA2s10s at +0.25 (9 trades) and US2Y/CA2Y at +0
 
 Diagnosis on US2s10s/CA2s10s (2022–2026), at the default settings:
 
-- 252-day z-score warm-up + 126-day vol warm-up consumes ~36% of a 1,021-day window
+- 252-day z-score warm-up + 126-day vol warm-up consumes 37% of a 1,021-day window
 - Only **9 trades**, in position **93 of 1,021 days (9%)**
 - With 9 trades, Sharpe is noise: one bad trade dominates
 

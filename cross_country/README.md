@@ -15,6 +15,7 @@ From this folder:
 pip install -r ../requirements.txt
 python scripts/make_tables.py    # results/*.csv
 python scripts/make_figures.py   # results/grrv_fig*.png
+python scripts/make_diagnostics.py   # results/diagnostics_summary.csv (numbers quoted in FINDINGS.md)
 ```
 
 Both run offline from the public-data cache in `gr_rv/data/` (US yields from FRED, German

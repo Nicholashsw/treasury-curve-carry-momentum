@@ -52,6 +52,7 @@ class Claim:
         self.source, self.field, self._exp = source, field, expected
 
     every = False
+    lt = False          # "below X": the printed bound must be >= the actual value
 
     def matches(self):
         ms = list(re.finditer(self.pattern, text(self.doc))) if self.every else \
@@ -67,6 +68,8 @@ class Claim:
 
     def check(self):
         e = self.expected()
+        if self.lt:
+            return all(num(s) >= e for s, _ in self.matches())
         return all(abs(num(s) - e) <= 0.5 * 10 ** -decimals(s) + 1e-9 for s, _ in self.matches())
 
 
@@ -297,12 +300,6 @@ for tst, lab in [("B1_mom_gated", "B1 momentum, carry-gated"), ("B2_mom_tilted",
         [cell(DMT, "test", tst, "sharpe_alt"), cell(DMT, "test", tst, "sharpe_base"),
          cell(DMT, "test", tst, "dm"), cell(DMT, "test", tst, "p")])
 SC = "carry/results/sleeve_correlations.csv"
-row("sleeve correlations", C, r"\| carry_curve \| ([\d.]+) \| 1.000 \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \|",
-    [(SC, f"carry_curve.{c}", (lambda c: lambda: csv(SC).loc[1, c])(c)) for c in
-     ["carry_kmpv", "momentum", "rev_2s10s", "rev_5s30s"]][:1] +
-    [(SC, "carry_curve.momentum", lambda: csv(SC).loc[1, "momentum"]),
-     (SC, "carry_curve.rev_2s10s", lambda: csv(SC).loc[1, "rev_2s10s"]),
-     (SC, "carry_curve.rev_5s30s", lambda: csv(SC).loc[1, "rev_5s30s"])])
 DG = "carry/results/diagnostics_summary.csv"
 row("spanning KMPV", C, r"Carry \(KMPV, primary\) \| (-[\d.]+)%/yr \| (-[\d.]+) \| ([\d.]+) \|",
     [(DG, "spanning_carry_kmpv.alpha", lambda: csv(DG).query("name == 'spanning_carry_kmpv' and field == 'alpha_pct_per_yr'")["value"].iloc[0]),
@@ -367,6 +364,232 @@ def panel_rows():
 row("data rows", F, r"(\d,\d+) aligned daily observations",
     [("cross_country/gr_rv/data/*_yields.csv", "rows with all 16 series from 2010-01-01", panel_rows)])
 
+
+# ---- extra sources: small aggregate csvs written by the carry and cross-country scripts
+def kv(rel, name, field):
+    """(source, field, expected) for a long-format csv with columns name, field, value."""
+    return (rel, f"{name}.{field}",
+            lambda: csv(rel)[(csv(rel)["name"] == name) & (csv(rel)["field"] == field)]["value"].iloc[0])
+
+
+def kvv(rel, name, field):
+    return kv(rel, name, field)[2]()
+
+
+CR = "carry/results/"
+DG, SG, BS = CR + "diagnostics_summary.csv", CR + "sign_check.csv", CR + "bootstrap_summary.csv"
+UR, UJ = CR + "us_rule_summary.csv", CR + "us_diagnostic_dv01_jump.csv"
+EXP = CR + "experiments_A_to_G.csv"
+XD = "cross_country/results/diagnostics_summary.csv"
+SCV = CR + "sleeve_correlations.csv"
+RS = CR + "regime_stability.csv"
+URD = CR + "us_rule_dispersion.csv"
+
+
+def exv(book, field):
+    return (EXP, f"{book}.{field}", lambda: col(EXP, "book", book, field)())
+
+
+def exv100(book, field):
+    return (EXP, f"{book}.{field}*100", lambda: 100 * col(EXP, "book", book, field)())
+
+
+def frozen_diff(label):
+    """Printed diff = reproduced - frozen, both read from the same table row."""
+    def f():
+        m = re.search(re.escape(label) + r" \| ([\d.]+) \| ([\d.]+) \| ([+-][\d.]+) \|", text(FROZEN))
+        return float(m.group(3))
+    return f
+
+
+def sleeve(i, j):
+    return (SCV, f"[{i},{j}]", lambda: csv(SCV).iloc[i, j + 1])
+
+
+def ic_neg():
+    return (SG, "count(ic_spearman < 0)", lambda: (csv(SG)[csv(SG)["name"] == "ic_spearman"]["value"] < 0).sum())
+
+
+def ic_roots():
+    return (SG, "count(ic_spearman)", lambda: (csv(SG)["name"] == "ic_spearman").sum())
+
+
+def sharpe_gap():
+    return (EXP, "G_baseline - G_equal_3sleeve sharpe",
+            lambda: col(EXP, "book", "G_baseline_2sleeve_mom_2s10s", "sharpe")() - col(EXP, "book", "G_equal_3sleeve", "sharpe")())
+
+
+def dd_gap():
+    return (EXP, "|maxdd G_equal_3sleeve| - |maxdd baseline|",
+            lambda: abs(col(EXP, "book", "G_equal_3sleeve", "maxdd")()) - abs(col(EXP, "book", "G_baseline_2sleeve_mom_2s10s", "maxdd")()))
+
+
+def n_pos_sub():
+    return (RS, "count(carry_kmpv > 0)", lambda: (csv(RS)["carry_kmpv"] > 0).sum())
+
+
+def disp(panel, root, field):
+    return (URD, f"{panel}.{root}.{field}", lambda: csv(URD)[(csv(URD)["panel"] == panel) & (csv(URD)["root"] == root)][field].iloc[0])
+
+
+def nonus_kurt(fn):
+    return (URD, f"{fn.__name__}(cleaned kurt, non-US)", lambda: fn(csv(URD)[(csv(URD)["panel"] == "cleaned") & (csv(URD)["root"] != "US")]["kurt"]))
+
+
+EFBOOKS = ["E_carry50_mom50", "F_carry50_2s10s50", "E_carry75_mom25", "F_carry75_2s10s25"]
+
+
+def ef(fn, field):
+    return (EXP, f"{fn.__name__} {field} of E/F 50,75", lambda: fn(col(EXP, "book", b, field)() for b in EFBOOKS))
+
+
+def dgcol(name, fn):
+    return (DG, f"{fn} {name}", lambda: getattr(csv(DG)[csv(DG)["name"] == name]["value"], fn)())
+
+
+C = FROZEN
+row("headline", C, r"Sharpe of (0\.02) standalone, anti-predicts next-month (?:> )?returns in (5) of (6) roots, and \*subtracts\* (0\.16) Sharpe and (6) points",
+    [exv("A2_carry_xs", "sharpe"), ic_neg(), ic_roots(), sharpe_gap(), dd_gap()])
+for lab in ["Duration momentum", "2s10s reversion", "5s30s reversion", "2s5s10s butterfly"]:
+    row(f"section 0 diff {lab}", C, lab + r" \| [\d.]+ \| [\d.]+ \| ([+-][\d.]+) \|",
+        [(HM, f"sharpe - frozen [{lab}]", lambda lab=lab: float(re.search(re.escape(lab) + r" \| ([\d.]+) \| ([\d.]+) \|", text(FROZEN)).group(1)) - float(re.search(re.escape(lab) + r" \| ([\d.]+) \| ([\d.]+) \|", text(FROZEN)).group(2)))])
+row("section 0 max diff", C, r"All within ([\d.]+) Sharpe",
+    [(HM, "max |reproduced - frozen|", lambda: max(abs(frozen_diff(l)()) for l in ["Duration momentum", "2s10s reversion", "5s30s reversion", "2s5s10s butterfly"]))])
+row("rounding boundary", C, r"rounding-boundary cases \(([\d.]+), ([\d.]+)\)", [hmx("2s10s_reversion", "sharpe"), hmx("2s5s10s_fly", "sharpe")])
+row("US episode", C, r"\((\d+) obs, ([\d.]+)% of sample", [kv(UR, "episode", "days"), kv(UR, "episode", "share_of_sample_pct")])
+row("US DV01 jump", C, r"largest US DV01 jump in the sample \(\+([\d.]+)%, (\d{4})-(\d\d)-(\d\d)\)",
+    [kv(UJ, "us_dv01", "max_jump_pct"), kv(UJ, "us_dv01", "max_jump_year"), kv(UJ, "us_dv01", "max_jump_month"), kv(UJ, "us_dv01", "max_jump_day")])
+row("US rule table", C, r"sd ratio vs TY \| ([\d.]+)× \| ([\d.]+)× \|.*?Excess kurtosis \| ([\d.]+) \| ([\d.]+) \| (-[\d.]+) to \+([\d.]+) \|"
+    r".*?Mean corr with other roots \| \+([\d.]+) \| \+([\d.]+) \| \+([\d.]+) among others \|"
+    r".*?\| (\d+)% \((\d+)/(\d+)\) \| ([\d.]+)% false-positive",
+    [disp("raw", "US", "sd_ratio_vs_TY"), disp("cleaned", "US", "sd_ratio_vs_TY"), disp("raw", "US", "kurt"), disp("cleaned", "US", "kurt"),
+     nonus_kurt(min), nonus_kurt(max),
+     kv(UR, "raw_mean_corr", "us_vs_others"), kv(UR, "cleaned_mean_corr", "us_vs_others"), kv(UR, "cleaned_mean_corr", "among_others"),
+     kv(UR, "episode", "guard_caught_pct"), kv(UR, "episode", "guard_caught_days"), kv(UR, "episode", "days"),
+     kv(UR, "non_episode", "guard_flagged_pct")])
+row("vols", C, r"much lower volatility \(([\d.]+)% and ([\d.]+)%\)", [exv100("A2_carry_xs", "vol"), exv100("A2_carrycurve_xs", "vol")])
+row("A fails", C, r"Sharpe ([\d.]+) \(needs > 0\.4\), NW-t ([\d.]+) \(needs > 2\.0\), and sign positive in only (\d) of 4 subperiods",
+    [exv("A2_carry_xs", "sharpe"), exv("A2_carry_xs", "nw_t"), n_pos_sub()])
+row("best conditioned", C, r"C2 2s10s tilt 0\.25, Sharpe ([\d.]+) vs ([\d.]+)\).*?\(([\d.]+) vs ([\d.]+)/yr\)",
+    [exv("C2_2s10s_tilt0.25", "sharpe"), hmx("2s10s_reversion", "sharpe"), exv("C2_2s10s_tilt0.25", "turnover"), hmx("2s10s_reversion", "turnover_per_yr")])
+row("DM counts", C, r"(\d+) DM tests, (\d+) survive", [kv(BS, "dm_tests", "n_tests"), kv(BS, "dm_tests", "n_fdr_pass")], every=True)
+row("E/F range", C, r"E/F at 50% and 75% carry \| ([\d.]+) . ([\d.]+) \| (-\d+)% to (-\d+)%",
+    [ef(min, "sharpe"), ef(max, "sharpe"), ef(max, "maxdd"), ef(min, "maxdd")])
+row("incremental Sharpe", C, r"Incremental Sharpe of adding carry: (-[\d.]+), stationary block bootstrap 95% CI \[(-[\d.]+), \+([\d.]+)\]\. Drawdown worsens from (-[\d.]+)% to (-[\d.]+)%",
+    [kv(BS, "bootstrap_3sleeve_vs_2sleeve", "sharpe_diff"), kv(BS, "bootstrap_3sleeve_vs_2sleeve", "ci_low"), kv(BS, "bootstrap_3sleeve_vs_2sleeve", "ci_high"),
+     exv("G_baseline_2sleeve_mom_2s10s", "maxdd"), exv("G_equal_3sleeve", "maxdd")])
+row("rename 1c", C, r"\| (-[\d.]+) Sharpe, CI \[(-[\d.]+), \+([\d.]+)\], DD worse by (\d)pp",
+    [kv(BS, "bootstrap_3sleeve_vs_2sleeve", "sharpe_diff"), kv(BS, "bootstrap_3sleeve_vs_2sleeve", "ci_low"), kv(BS, "bootstrap_3sleeve_vs_2sleeve", "ci_high"), dd_gap()])
+row("sleeve table kmpv", C, r"\| carry_kmpv \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \|", [sleeve(0, j) for j in range(5)])
+row("sleeve table curve", C, r"\| carry_curve \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \|", [sleeve(1, j) for j in range(5)])
+row("max |rho| of primary", C, r"\(\|ρ\| ≤ ([\d.]+)\)", [(SCV, "max |carry_kmpv vs existing sleeves|", lambda: max(csv(SCV).iloc[0, 3:6]))])
+row("secondary vs 5s30s", C, r"\((?:ρ )?(0\.369)\)", [sleeve(1, 4)], every=True)
+row("primary correlations", C, r"Primary passes \(([\d.]+), ([\d.]+)\)", [sleeve(0, 2), sleeve(0, 3)])
+row("IC counts", C, r"negative in (\d) of (\d) roots", [ic_neg(), ic_roots()], every=True)
+row("rank corr", C, r"is \+([\d.]+), above", [kv(SG, "rank_corr_carry_dv01", "mean")])
+row("rank corr share", C, r"above \+0\.5 on ([\d.]+)% of days", [kv(SG, "rank_corr_carry_dv01", "share_gt_0.5_pct")])
+row("mean carry by root", C, r"TU \+([\d.]+)%, FV \+([\d.]+)%, TY \+([\d.]+)%, UXY \+([\d.]+)%, US \+([\d.]+)%, WN \+([\d.]+)%\)",
+    [disp("cleaned", r, "mean") for r in ["TU", "FV", "TY", "UXY", "US", "WN"]])
+row("neutral vol", C, r"collapses its volatility to ([\d.]+)%", [exv100("A2_carry_xs", "vol")])
+row("cash-curve book", C, r"looks strong \(([\d.]+), t ([\d.]+)\)", [exv("A2_carrycurve_xs", "sharpe"), exv("A2_carrycurve_xs", "nw_t")])
+row("cash-curve turnover", C, r"Turnover is ([\d.]+) per year", [exv("A2_carrycurve_xs", "turnover")])
+row("cost sensitivity text", C, r"flat \(([\d.]+) . ([\d.]+) at 3. tick\)", [kv(DG, "cost_sensitivity_curve", "1x"), kv(DG, "cost_sensitivity_curve", "3x")])
+row("exclusions", C, r"Excluding US \| Worse \(([\d.]+) . (-[\d.]+)\)", [exv("A2_carry_xs", "sharpe"), exv("A2_carry_xs_noUS", "sharpe")])
+row("exclusions WN", C, r"Excluding WN \| Worse \(([\d.]+) . (-[\d.]+)\)", [exv("A2_carry_xs", "sharpe"), exv("A2_carry_xs_noWN", "sharpe")])
+row("variants disagree", C, r"primary ([\d.]+), secondary ([\d.]+)\. Pre-specified", [exv("A2_carry_xs", "sharpe"), exv("A2_carrycurve_xs", "sharpe")])
+row("subperiods secondary", C, r"\(secondary\) \| \+([\d.]+) / \+([\d.]+) / \+([\d.]+) / \+([\d.]+) ",
+    [(RS, f"carry_curve[{i}]", (lambda i: lambda: csv(RS)["carry_curve"].iloc[i])(i)) for i in range(4)])
+row("subperiods primary", C, r"\(primary\) \| \+([\d.]+) / \+([\d.]+) / (-[\d.]+) / (-[\d.]+) ",
+    [(RS, f"carry_kmpv[{i}]", (lambda i: lambda: csv(RS)["carry_kmpv"].iloc[i])(i)) for i in range(4)])
+row("cost sensitivity row", C, r"primary ([\d.]+) / (-[\d.]+) / (-[\d.]+); secondary ([\d.]+) / ([\d.]+) / ([\d.]+) \|",
+    [kv(DG, "cost_sensitivity_kmpv", k) for k in ("1x", "2x", "3x")] + [kv(DG, "cost_sensitivity_curve", k) for k in ("1x", "2x", "3x")])
+row("autocorrelation", C, r"\| ([\d.]+) \(1d\), ([\d.]+).([\d.]+) \(63d\) . persistent, so turnover is low \(([\d.]+)/yr\)",
+    [dgcol("kmpv_autocorr_lag1", "mean"), dgcol("kmpv_autocorr_lag63", "min"), dgcol("kmpv_autocorr_lag63", "max"), exv("A2_carry_xs", "turnover")])
+row("calendar vs cash", C, r"\| ([\d.]+).([\d.]+) per root", [dgcol("calendar_vs_cash_curve_corr", "min"), dgcol("calendar_vs_cash_curve_corr", "max")])
+row("rename 1a", C, r"Sharpe ([\d.]+) vs > 0\.4; NW-t ([\d.]+) vs > 2\.0; (\d)/4 subperiods", [exv("A2_carry_xs", "sharpe"), exv("A2_carry_xs", "nw_t"), n_pos_sub()])
+row("book count", C, r"(\d+)(?= book-return series|-column frame)", [(EXP, "len(books)", lambda: len(csv(EXP)))], every=True)
+
+# ---- cross_country/FINDINGS.md
+F = "cross_country/FINDINGS.md"
+RSC, OOR, IRS, FXC, FSS = X + "regime_screen.csv", X + "out_of_regime.csv", X + "in_regime_survivors.csv", X + "fx_contamination.csv", X + "full_sample_screen.csv"
+
+
+def n(rel, expr, fn):
+    return (rel, expr, lambda: fn(csv(rel)))
+
+
+def survivor(rel, name, per, field):
+    return (rel, f"{name}.{per}.{field}",
+            lambda: csv(rel)[(csv(rel)["name"] == name) & csv(rel)["period"].str.startswith(per[:4])][field].iloc[0])
+
+
+NCAND = lambda d: d["passes"].sum()
+row("summary arc", F, r"Full sample \(2010.2026\): (\d+) of (\d+) candidates",
+    [n(FSS, "sum(passes)", lambda d: d["passes"].sum()), n(FSS, "len", len)])
+row("banner new values", F, r"raw regime passes \d+ . (\d+), FDR (?:> )?survivors \d+ . (\d+), out-of-regime mean Sharpe -[\d.]+ . (-[\d.]+), positive \d+ of \d+ . (\d+) of (\d+), (?:> )?Canada in survivors \d+ of \d+ . (\d+) of (\d+)",
+    [n(RSC, "sum(passes)", lambda d: d["passes"].sum()), n(RSC, "sum(passes_fdr)", lambda d: d["passes_fdr"].sum()),
+     n(OOR, "mean(oos_sharpe)", lambda d: d["oos_sharpe"].mean()), n(OOR, "sum(oos_sharpe>0)", lambda d: (d["oos_sharpe"] > 0).sum()),
+     n(OOR, "len", len), kv(XD, "survivors", "raw_with_canada"), kv(XD, "survivors", "raw")])
+row("panel rows", F, r"(3,762)", [kv(XD, "panel", "rows")], every=True)
+row("panel series", F, r"(\d+) series, no gaps", [kv(XD, "panel", "series")])
+row("zero-change days", F, r"JP 2Y has ([\d,]+) zero-change days", [kv(XD, "zero_change_days", "JP_2Y")])
+row("zero-change days US", F, r"US 2Y consequently shows (\d+) zero-change days", [kv(XD, "zero_change_days", "US_2Y")])
+row("FX pair values", F, r"DE5Y/JP5Y ([\d.]+) and US2Y/CA2Y ([\d.]+) in 2015.2019; the other nine are below ([\d.]+)\)",
+    [(FXC, "r2[DE5Y_vs_JP5Y]", col(FXC, "name", "DE5Y_vs_JP5Y", "r2")), (FXC, "r2[US2Y_vs_CA2Y]", col(FXC, "name", "US2Y_vs_CA2Y", "r2")),
+     n(FXC, "max(r2) of the other nine", lambda d: d[~d["name"].isin(["DE5Y_vs_JP5Y", "US2Y_vs_CA2Y"])]["r2"].max())])
+CLAIMS[-1].lt = True
+row("FX reproduction", F, r"US2s10s/CA2s10s reproduces at ([\d.]+)",
+    [(FXC, "r2[US2s10s_vs_CA2s10s 2022-26]", lambda: csv(FXC)[(csv(FXC)["name"] == "US2s10s_vs_CA2s10s") & csv(FXC)["r2"].notna()]["r2"].iloc[0])])
+row("FX max", F, r"ten survivors with FX overlap is ([\d.]+) \(DE5Y/JP5Y", [n(FXC, "max(r2)", lambda d: d["r2"].max())])
+row("FX under 1%", F, r"explains under (\d)% of the P&L", [n(FXC, "100*max(r2)", lambda d: 100 * d["r2"].max())])
+CLAIMS[-1].lt = True
+row("FX quote", F, r"stands; ([\d.]+) is the figure to quote", [n(FXC, "max(r2)", lambda d: d["r2"].max())])
+row("FX at most", F, r"R. . ([\d.]+)\)", [n(FXC, "max(r2)", lambda d: d["r2"].max())])
+row("sub-period summary", F, r"Sub-period \((\d) policy regimes\): (\d+) of (\d+) pass the screen, (\d+) survive FDR",
+    [n(RSC, "nunique(period)", lambda d: d["period"].nunique()), n(RSC, "sum(passes)", lambda d: d["passes"].sum()), n(RSC, "len", len), n(RSC, "sum(passes_fdr)", lambda d: d["passes_fdr"].sum())])
+row("grid size", F, r"entire (\d+)-test grid \((\d+) candidates . (\d) periods\)",
+    [n(RSC, "len", len), n(RSC, "nunique(name)", lambda d: d["name"].nunique()), n(RSC, "nunique(period)", lambda d: d["period"].nunique())])
+row("half-life ranges", F, r"half-lives in the tradable ([\d.]+).([\d.]+) day range rather than the ([\d.]+).([\d,]+) days of the full sample",
+    [kv(XD, "fdr_survivors", "half_life_min"), kv(XD, "fdr_survivors", "half_life_max"),
+     n(FSS, "min(half_life)", lambda d: d["half_life"].min()), n(FSS, "max(half_life)", lambda d: d["half_life"].max())])
+SURV = [("US2s10s vs CA2s10s", "2022–2026"), ("JP2s10s vs CA2s10s", "2020–2021"), ("US5Y vs CA5Y", "2020–2021"), ("DE5Y vs CA5Y", "2020–2021"),
+        ("US2s10s vs CA2s10s", "2010–2014"), ("DE5Y vs JP5Y", "2015–2019"), ("DE10Y vs CA10Y", "2020–2021"), ("US2Y vs CA2Y", "2015–2019"),
+        ("DE5s30s vs CA5s30s", "2022–2026"), ("US10Y vs CA10Y", "2020–2021"), ("US5s30s vs CA5s30s", "2015–2019")]
+for lab, per in SURV:
+    nm = lab.replace(" vs ", "_vs_")
+    row(f"survivor {lab} {per}", F, r"\| " + re.escape(lab) + r" \| " + per + r" \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| ([\d.]+) \| (?:yes|no) \|",
+        [survivor(RSC, nm, per, f) for f in ("beta", "adf_p", "adf_p_fdr", "half_life", "beta_cv")])
+row("Canada share", F, r"Canada appears in (\d+) of (\d+) raw survivors and (\d+) of (\d+) FDR survivors",
+    [kv(XD, "survivors", "raw_with_canada"), kv(XD, "survivors", "raw"), kv(XD, "survivors", "fdr_with_canada"), kv(XD, "survivors", "fdr")])
+row("most stable", F, r"passes in (\d) of (\d) regimes . both times surviving FDR . with the tightest . range \(([\d.]+)\)",
+    [kv(XD, "US2s10s_vs_CA2s10s", "periods_passed"), n(RSC, "nunique(period)", lambda d: d["period"].nunique()), kv(XD, "US2s10s_vs_CA2s10s", "beta_range")])
+row("window default", F, r"the module default of 252 gives a mean of (-[\d.]+) on the same twelve", [kv(XD, "oos_window_252", "mean_sharpe")])
+row("OOS summary", F, r"Mean OOS Sharpe (-[\d.]+); positive in (\d+) of (\d+) . and the five positives are small \(\+([\d.]+) to \+([\d.]+)\) while the losses run to (-[\d.]+)\.",
+    [n(OOR, "mean(oos_sharpe)", lambda d: d["oos_sharpe"].mean()), n(OOR, "sum(oos_sharpe>0)", lambda d: (d["oos_sharpe"] > 0).sum()), n(OOR, "len", len),
+     n(OOR, "min positive oos_sharpe", lambda d: d[d["oos_sharpe"] > 0]["oos_sharpe"].min()),
+     n(OOR, "max oos_sharpe", lambda d: d["oos_sharpe"].max()), n(OOR, "min oos_sharpe", lambda d: d["oos_sharpe"].min())])
+row("DE5Y beta", F, r"DE5Y/CA5Y is fit at ([\d.]+), then ([\d.]+), then ([\d.]+)\.",
+    [(OOR, f"DE5Y_vs_CA5Y[{i}].beta_fit", (lambda i: lambda: csv(OOR)[csv(OOR)["name"] == "DE5Y_vs_CA5Y"]["beta_fit"].iloc[i])(i)) for i in range(3)])
+row("in-period", F, r"(\d+) of the (\d+) raw-screen survivors had a negative in-period Sharpe.*?US2s10s/CA2s10s at \+([\d.]+) \((\d+) trades\) and US2Y/CA2Y at \+([\d.]+) \((\d+) trades\)\. The worst is DE10Y/CA10Y at (-[\d.]+)\.",
+    [n(IRS, "sum(sharpe<0)", lambda d: (d["sharpe"] < 0).sum()), n(IRS, "len", len),
+     survivor(IRS, "US2s10s_vs_CA2s10s", "2022", "sharpe"), survivor(IRS, "US2s10s_vs_CA2s10s", "2022", "n_trades"),
+     (IRS, "US2Y_vs_CA2Y.sharpe", col(IRS, "name", "US2Y_vs_CA2Y", "sharpe")), (IRS, "US2Y_vs_CA2Y.n_trades", col(IRS, "name", "US2Y_vs_CA2Y", "n_trades")),
+     (IRS, "DE10Y_vs_CA10Y.sharpe", col(IRS, "name", "DE10Y_vs_CA10Y", "sharpe"))])
+row("warm-up", F, r"consumes ([\d.]+)% of a ([\d,]+)-day window - Only (\d+) trades, in position (\d+) of ([\d,]+) days \((\d+)%\)",
+    [(XD, "100*warmup_days/days", lambda: 100 * kvv(XD, "in_regime_window_252", "warmup_days") / kvv(XD, "in_regime_2022_2026", "days")),
+     kv(XD, "in_regime_2022_2026", "days"), kv(XD, "in_regime_window_252", "trades"), kv(XD, "in_regime_window_252", "days_in_position"), kv(XD, "in_regime_2022_2026", "days"),
+     (XD, "100*days_in_position/days", lambda: 100 * kvv(XD, "in_regime_window_252", "days_in_position") / kvv(XD, "in_regime_2022_2026", "days"))])
+row("9 trades", F, r"With (\d+) trades, Sharpe is noise", [kv(XD, "in_regime_window_252", "trades")])
+row("window sensitivity", F, r"\+([\d.]+) at window 252, \+([\d.]+) at 126, \+([\d.]+) at 63 \((\d+), (\d+) and (\d+) trades respectively\)",
+    [kv(XD, "in_regime_window_252", "sharpe"), kv(XD, "in_regime_window_126", "sharpe"), kv(XD, "in_regime_window_63", "sharpe"),
+     kv(XD, "in_regime_window_252", "trades"), kv(XD, "in_regime_window_126", "trades"), kv(XD, "in_regime_window_63", "trades")])
+row("swing", F, r"swings from ([\d.]+) to ([\d.]+) on the lookback", [kv(XD, "in_regime_window_252", "sharpe"), kv(XD, "in_regime_window_63", "sharpe")])
+row("supported", F, r"\((\d+)/(\d+) rejected\)", [n(FSS, "len", len), n(FSS, "len", len)])
+row("supported 2", F, r"\((\d+) of (\d+) survive FDR\), with tradable half-lives of ([\d.]+).([\d.]+) days",
+    [n(RSC, "sum(passes_fdr)", lambda d: d["passes_fdr"].sum()), n(RSC, "len", len), kv(XD, "fdr_survivors", "half_life_min"), kv(XD, "fdr_survivors", "half_life_max")])
+row("supported 3", F, r"mean OOS Sharpe (-[\d.]+), and (\d+) of (\d+) raw survivors lose money",
+    [n(OOR, "mean(oos_sharpe)", lambda d: d["oos_sharpe"].mean()), n(IRS, "sum(sharpe<0)", lambda d: (d["sharpe"] < 0).sum()), n(IRS, "len", len)])
+
 # ---------------------------------------------------------------- paper/treasury_curve_paper.tex
 T = "paper/treasury_curve_paper.tex"
 row("2s10s momentum Sharpe (every use)", T, r"(?<![\d.])(-0\.79)(?!\d)", [hmx("2s10s_momentum_signal", "sharpe")], every=True)
@@ -406,9 +629,8 @@ row("conclusion Sharpe", T, r"strategies near a Sharpe of (0\.7);",
 
 # ---------------------------------------------------------------- coverage
 # Every number in these documents must be covered by a claim above or be allowlisted with a one-word
-# reason. CARRY_RESULTS.md and cross_country/FINDINGS.md have their tables claim-checked above but are
-# not coverage-checked (their prose carries several hundred more numbers).
-COVERED_DOCS = ["README.md", "DATA.md", "walkforward/PREREG.md", PAPER]
+# reason.
+COVERED_DOCS = ["README.md", "DATA.md", "walkforward/PREREG.md", PAPER, "carry/CARRY_RESULTS.md", "cross_country/FINDINGS.md"]
 MONTH = r"(?:January|February|March|April|May|June|July|August|September|October|November|December)"
 TOKEN = re.compile(
     rf"(?P<date>\d{{4}}-\d{{2}}-\d{{2}}|\d{{1,2}} {MONTH}(?: \d{{4}})?|{MONTH} \d{{4}})"
@@ -441,6 +663,18 @@ ALLOW = [
     (PAPER, r"clipped at \\pm 3|capped at 3\\times|10% annualized|lagged one day|t\{-\}1", "setting"),
     (PAPER, r"2-year note's cost|2-year leg|10-year yield|10-year note|10-year tick|10-year leg|2-year", "tenor"),
     (PAPER, r"lookback \(63, 126, 252 or 504 days\)", "setting"),
+    ("carry/CARRY_RESULTS.md", r"## \d\. |§[\d.]+|Phase \d|### ", "ref"),
+    ("carry/CARRY_RESULTS.md", r"\d\. (?:Signal vs|DV01-neutrality bug|Blend vol|It closes|The mechanism|The data verdict)", "list"),
+    ("carry/CARRY_RESULTS.md", r"against frozen [\d./-]+|\| (?:Duration momentum|2s10s reversion|5s30s reversion|2s5s10s butterfly) \| [\d.]+ \| [\d.]+ \|", "frozen"),
+    ("carry/CARRY_RESULTS.md", r"pandas build \(2\.2\.2|python 3\.12\.7|pandas 2\.2\.2|numpy 1\.26\.4|Environment:", "version"),
+    ("carry/CARRY_RESULTS.md", r"common 10% (?:annualised|vol)|DV01-jump > 5%|> 6 × trailing IQR|±10bd|HAC\(21\)|next 21-day|FDR 5%|FDR at 5%|1×/2×/3×|at 3× tick|tilt [\d.]+|% carry / \d+%|E/F at 50% and 75%|bootstrap 95% CI|top-2 on|above \+0\.5|≈1|DV01 x 100|2022–26|Generic 3|7-column", "setting"),
+    ("carry/CARRY_RESULTS.md", r"Sharpe > 0\.4|NW-t > 2\.0|≥3 of 4|needs > 0\.4|needs > 2\.0|vs > 0\.4|vs > 2\.0|HAC t > 2\.0|p < 0\.10|≥ \+0\.10|≥15%|ρ.{1,4}< 0\.3", "bar"),
+    ("carry/CARRY_RESULTS.md", r"of 4 subperiods|/4 subperiods", "count"),
+    ("carry/CARRY_RESULTS.md", r"\| (?:2|3) sleeves", "count"),
+    ("cross_country/FINDINGS.md", r"## Summary|Phase 0|## Next steps|\d\. (?:Full sample|Sub-period|But it|Model FX|Add UK|Time-varying|Shorter|Only then)", "list"),
+    ("cross_country/FINDINGS.md", r"3,829|raw regime passes 7|survivors 3 →|Sharpe -0\.32|positive 2 of 12|survivors 6 of 7|\"4 survive FDR\"|tables said 3", "history"),
+    ("cross_country/FINDINGS.md", r"DGS2/5/10/30", "ticker"),
+    ("cross_country/FINDINGS.md", r"window=126|default of 252|252-day z-score|126-day vol|at window 252|\+0\.37 at 126|\+0\.59 at 63|63–126 day z-score", "setting"),
 ]
 
 

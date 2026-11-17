@@ -58,3 +58,11 @@ print(contrib.round(3).to_string())
 
 t.to_csv(os.path.join(RES,"dm_tests.csv"),index=False)
 print("\nwrote dm_tests.csv")
+
+pd.DataFrame([("bootstrap_3sleeve_vs_2sleeve", "sharpe_diff", sharpe(B["G_equal_3sleeve"]) - sharpe(B["G_baseline_2sleeve_mom_2s10s"])),
+              ("bootstrap_3sleeve_vs_2sleeve", "ci_low", lo), ("bootstrap_3sleeve_vs_2sleeve", "ci_high", hi),
+              ("bootstrap_3sleeve_vs_2sleeve", "median", md),
+              ("bootstrap_F_vs_2s10s", "sharpe_diff", sharpe(B["F_carry25_2s10s75"]) - sharpe(R2)),
+              ("bootstrap_F_vs_2s10s", "ci_low", lo2), ("bootstrap_F_vs_2s10s", "ci_high", hi2),
+              ("dm_tests", "n_tests", len(t)), ("dm_tests", "n_fdr_pass", int(t["fdr_pass_5pct"].sum()))],
+             columns=["name", "field", "value"]).round(4).to_csv(os.path.join(RES, "bootstrap_summary.csv"), index=False)

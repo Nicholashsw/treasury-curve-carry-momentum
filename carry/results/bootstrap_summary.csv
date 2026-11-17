@@ -1,0 +1,10 @@
+name,field,value
+bootstrap_3sleeve_vs_2sleeve,sharpe_diff,-0.1564
+bootstrap_3sleeve_vs_2sleeve,ci_low,-0.3823
+bootstrap_3sleeve_vs_2sleeve,ci_high,0.0386
+bootstrap_3sleeve_vs_2sleeve,median,-0.1608
+bootstrap_F_vs_2s10s,sharpe_diff,-0.0372
+bootstrap_F_vs_2s10s,ci_low,-0.1756
+bootstrap_F_vs_2s10s,ci_high,0.0905
+dm_tests,n_tests,16.0
+dm_tests,n_fdr_pass,8.0

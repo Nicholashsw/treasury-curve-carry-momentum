@@ -1,0 +1,10 @@
+name,field,value
+raw_mean_corr,us_vs_others,0.1492
+raw_mean_corr,among_others,0.6655
+cleaned_mean_corr,us_vs_others,0.5808
+cleaned_mean_corr,among_others,0.6738
+episode,days,61.0
+episode,share_of_sample_pct,1.4663
+episode,guard_caught_pct,100.0
+episode,guard_caught_days,61.0
+non_episode,guard_flagged_pct,7.7336

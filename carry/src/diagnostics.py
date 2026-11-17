@@ -12,6 +12,7 @@ C=S.carry_panel(D.ROOTS).reindex(CAL).ffill()
 CC=S.carry_curve_panel(D.ROOTS).reindex(CAL).ffill()
 B=pd.read_csv(os.path.join(RES,"_internal","book_returns_full.csv"),index_col=0,parse_dates=True)   # full 25 books; run_experiments.py writes it
 
+SUMMARY = []
 print("="*78); print("DIAGNOSTICS"); print("="*78)
 
 print("\n[1] Carry distribution by root (cleaned KMPV, %)")
@@ -20,11 +21,15 @@ print((100*C).describe().T[["mean","std","min","25%","50%","75%","max"]].round(3
 print("\n[2] Signal autocorrelation (KMPV)")
 print(pd.DataFrame({f"lag{l}": C.apply(lambda s: s.autocorr(l)) for l in (1,5,21,63)}).round(3).to_string())
 
+SUMMARY += [(f"kmpv_autocorr_lag{l}", r, C[r].autocorr(l)) for l in (1, 63) for r in D.ROOTS]
+
 print("\n[3] Carry through time: mean by year (%)")
 print((100*C.groupby(C.index.year).mean()).round(2).to_string())
 
 print("\n[4] Calendar-spread carry vs cash-curve carry (per-root corr of levels)")
 print(pd.Series({r: C[r].corr(CC[r]) for r in D.ROOTS}).round(3).to_string())
+
+SUMMARY += [("calendar_vs_cash_curve_corr", r, C[r].corr(CC[r])) for r in D.ROOTS]
 
 print("\n[5] Is the cash-curve carry book STATIC? (weights + turnover)")
 pos_cc = P.xs_positions(CC, CAL, D.ROOTS)
@@ -42,7 +47,7 @@ sl = pd.DataFrame({"carry_kmpv":B["A2_carry_xs"],"carry_curve":B["A2_carrycurve_
                    "rev_5s30s":NS["curves"]["5s30s_reversion"]}).dropna()
 print(sl.corr().round(3).to_string())
 
-SUMMARY = [("top2_share_cash_curve_pct", r, v) for r, v in (100*(rk<=2).mean()).items()]
+SUMMARY += [("top2_share_cash_curve_pct", r, v) for r, v in (100*(rk<=2).mean()).items()]
 SUMMARY.append(("a2_carrycurve_xs", "turnover_mean_abs_weight_change", chg.mean()))
 
 print("\n[7] SPANNING REGRESSION  carry ~ momentum + 2s10s + 5s30s   HAC(21)")
@@ -74,6 +79,7 @@ for nm,car in (("kmpv",C),("curve",CC)):
     for m in (1,2,3):
         p_=P.xs_positions(car,CAL,D.ROOTS)
         out.append(round(sharpe(run(p_[D.ROOTS],rets[D.ROOTS],cost_per_unit=base*m)["net"]),3))
+    SUMMARY += [(f"cost_sensitivity_{nm}", f"{m}x", o) for m, o in zip((1, 2, 3), out)]
     print(f"    {nm:6s} 1x={out[0]}  2x={out[1]}  3x={out[2]}")
 
 print("\n[10] Generic 3: confirm never used")
