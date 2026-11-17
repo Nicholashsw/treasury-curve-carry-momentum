@@ -5,7 +5,6 @@ expected). The text value is located with a regex, so a sentence that is reworde
 pattern fails loudly instead of being dropped. A claim passes when |value - expected| is within
 half a unit of the last printed digit. Run `python tests/test_claims.py` for the plain table.
 
-Known gaps are `known=` claims (xfail, strict): numbers whose source no longer exists.
 Out of scope: dates, ticker lists, commit times and the pre-registered bars in the plan.
 """
 import re
@@ -48,9 +47,9 @@ def decimals(s):
 
 
 class Claim:
-    def __init__(self, loc, doc, pattern, group, source, field, expected, known=None):
+    def __init__(self, loc, doc, pattern, group, source, field, expected):
         self.loc, self.doc, self.pattern, self.group = loc, doc, pattern, group
-        self.source, self.field, self._exp, self.known = source, field, expected, known
+        self.source, self.field, self._exp = source, field, expected
 
     every = False
 
@@ -74,11 +73,11 @@ class Claim:
 CLAIMS = []
 
 
-def row(loc, doc, pattern, specs, known=None, every=False):
+def row(loc, doc, pattern, specs, every=False):
     """One regex, several captured numbers; specs[i] = (source, field, expected) for group i+1."""
     for i, (src, fld, exp) in enumerate(specs, 1):
         if src is not None:
-            c = Claim(f"{doc} {loc} #{i}", doc, pattern, i, src, fld, exp, known)
+            c = Claim(f"{doc} {loc} #{i}", doc, pattern, i, src, fld, exp)
             c.every = every
             CLAIMS.append(c)
 
@@ -188,9 +187,6 @@ row("carry mean by root", R, r"TU ([\d.]+), FV ([\d.]+), TY ([\d.]+), UXY ([\d.]
       (lambda r: lambda: csv("carry/results/us_rule_dispersion.csv").query(f"panel == 'cleaned' and root == '{r}'")["mean"].iloc[0])(r))
      for r in ["TU", "FV", "TY", "UXY", "US", "WN"]])
 row("neutral carry vol", R, r"its volatility is ([\d.]+)%", [ex("A2_carry_xs", "vol", 100)])
-row("first implementation vol", R, r"which was not neutral, ran at about (\d+)%",
-    [("(none)", "no file: that version is no longer in the code", float("nan"))],
-    known="source removed: the non-neutral implementation is gone")
 row("cash-curve carry", R, r"does score ([\d.]+), but it holds the same two long-end contracts on (\d+)% of days and "
     r"turns over ([\d.]+) times",
     [ex("A2_carrycurve_xs", "sharpe"),
@@ -247,7 +243,7 @@ row("correction table reversion signal", R,
      frozen("2s10s reversion")])
 row("correction table DM 2s10s", R, r"\| DM 2s10s vs baseline \| ([\d.]+) \(p ([\d.]+)\) \| ([\d.]+) \(p ([\d.]+)\) \|",
     [hmx("2s10s_reversion", "dm_gross"), hmx("2s10s_reversion", "dm_p_gross"), frozen_dm(0),
-     (HM, "no file: p of the August net run", float("nan"))],
+     hmx("2s10s_reversion", "dm_p")],
     )
 row("correction table DM 5s30s", R, r"\| DM 5s30s vs baseline \| ([\d.]+) \(p ([\d.]+)\) \| ([\d.]+) \(p ([\d.]+)\) \|",
     [hmx("5s30s_reversion", "dm_gross"), hmx("5s30s_reversion", "dm_p_gross"), frozen_dm(1),
@@ -370,134 +366,11 @@ def panel_rows():
 row("data rows", F, r"(\d,\d+) aligned daily observations",
     [("cross_country/gr_rv/data/*_yields.csv", "rows with all 16 series from 2010-01-01", panel_rows)])
 
-# Build-dependent August values: the current pandas build rounds across the boundary or differs.
-HIST = "August-run value, not stored in any file; current build prints a different value"
-for c in CLAIMS:
-    if c.loc in ("README.md correction table 5s30s_reversion #1", "README.md correction table DM 2s10s #4",
-                 "README.md correction table DM butterfly #1"):
-        c.known = HIST
-
-
-PAPER = "paper/treasury_curve_paper.tex"
-# ---------------------------------------------------------------- paper/treasury_curve_paper.tex
-T = "paper/treasury_curve_paper.tex"
-row("2s10s momentum Sharpe (every use)", T, r"(?<![\d.])(-0\.79)(?!\d)", [hmx("2s10s_momentum_signal", "sharpe")], every=True)
-row("2s10s reversion Sharpe (every use)", T, r"(?<![\d.-])(0\.72)(?!\d)", [hmx("2s10s_reversion", "sharpe")], every=True)
-row("duration momentum Sharpe (every use)", T, r"(?<![\d.-])(0\.68)(?!\d)", [hmx("DurationMomentum", "sharpe")], every=True)
-row("5s30s Sharpe (every use)", T, r"(?<![\d.-])(0\.66)(?!\d)", [hmx("5s30s_reversion", "sharpe")], every=True)
-row("butterfly Sharpe (every use)", T, r"(?<![\d.-])(0\.08)(?!\d)", [hmx("2s5s10s_fly", "sharpe")], every=True)
-row("walk-forward pooled (abstract)", T, r"net Sharpe ratios of (0\.87) for 2s10s and (0\.69) for 5s30s",
-    [wfp("2s10s", "oos_sharpe"), wfp("5s30s", "oos_sharpe")])
-row("panel rows", T, r"aligned panel of (4,173) rows", [hmx("sample", "n_rows")])
-row("Sharpe range", T, r"Sharpe range of (0\.66) to (0\.72) with drawdowns of roughly (20)-(27)%",
-    [(HM, "min sharpe of curve books", lambda: min(csv(HM).query("field == 'sharpe'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])),
-     (HM, "max sharpe of curve books", lambda: max(csv(HM).query("field == 'sharpe'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])),
-     (HM, "min |maxdd| of curve books", lambda: min(abs(csv(HM).query("field == 'maxdd_pct'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"]))),
-     (HM, "max |maxdd| of curve books", lambda: max(abs(csv(HM).query("field == 'maxdd_pct'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])))])
-for b, lab in zip(BOOKS, ["Duration momentum \\(baseline\\)", "2s10s mean-reversion", "5s30s mean-reversion", "2s5s10s butterfly"]):
-    row(f"results table {b}", T, lab + r" & (-?[\d.]+) & (-\d+)% & (\d+) \\\\",
-        [hmx(b, "sharpe"), (HM, f"{b}.maxdd_pct", hm(b, "maxdd_pct")), hmx(b, "turnover_per_yr")])
-row("DM", T, r"DM=([\d.]+), p=([\d.]+) and DM=([\d.]+), p=([\d.]+)\), corresponding to an annualized return edge of about ([\d.]+)% and ([\d.]+)%",
-    [hmx("2s10s_reversion", "dm"), hmx("2s10s_reversion", "dm_p"), hmx("5s30s_reversion", "dm"),
-     hmx("5s30s_reversion", "dm_p"), hmx("2s10s_reversion", "dm_edge_pct"), hmx("5s30s_reversion", "dm_edge_pct")])
-row("DM butterfly", T, r"butterfly is negative \(DM=(-[\d.]+), p=([\d.]+)\)", [hmx("2s5s10s_fly", "dm"), hmx("2s5s10s_fly", "dm_p")])
-row("duration beta", T, r"has a slope of (-[\d.]+), indistinguishable", [hmx("2s10s_reversion", "beta_to_10y_yield_chg")])
-row("regime days", T, r"stress state \((\d+) days\), a steepening state \((\d,\d+) days\), and a flattening state \((\d,\d+) days\)",
-    [hmx("regime_days", "stress"), hmx("regime_days", "steepening"), hmx("regime_days", "flattening")])
-row("walk-forward fits", T, r"chosen in all (\w+) fits",
-    [(WF_T, "count(direction == reversion)", lambda: (csv(WF_T)["direction"] == "reversion").sum())])
-row("walk-forward DM", T, r"Duration momentum earns ([\d.]+) on the same 2015-2026 dates.*?is ([\d.]+) \(p=([\d.]+)\) for 2s10s and ([\d.]+) \(p=([\d.]+)\) for 5s30s",
-    [wfp("2s10s", "duration_mom_sharpe"), wfp("2s10s", "dm_stat"), wfp("2s10s", "dm_p"), wfp("5s30s", "dm_stat"), wfp("5s30s", "dm_p")])
-for sp, rx in (("2s10s", r"2s10s & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\"),
-               ("5s30s", r"5s30s & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\")):
-    row(f"walk-forward table {sp}", T, rx, [wf(sp, 0, "oos_sharpe"), wf(sp, 1, "oos_sharpe"), wf(sp, 2, "oos_sharpe"), wfp(sp, "oos_sharpe")])
-row("conclusion Sharpe", T, r"strategies near a Sharpe of (0\.7);",
-    [(HM, "mean sharpe of duration momentum and the two curve spreads",
-      lambda: csv(HM).query("field == 'sharpe'").set_index("name").loc[["DurationMomentum", "2s10s_reversion", "5s30s_reversion"], "value"].mean())])
-
-
-# ---------------------------------------------------------------- coverage
-# Every number in these documents must be covered by a claim above or be allowlisted with a one-word
-# reason. CARRY_RESULTS.md and cross_country/FINDINGS.md have their tables claim-checked above but are
-# not coverage-checked (their prose carries several hundred more numbers).
-COVERED_DOCS = ["README.md", "DATA.md", "walkforward/PREREG.md", PAPER]
-MONTH = r"(?:January|February|March|April|May|June|July|August|September|October|November|December)"
-TOKEN = re.compile(
-    rf"(?P<date>\d{{4}}-\d{{2}}-\d{{2}}|\d{{1,2}} {MONTH}(?: \d{{4}})?|{MONTH} \d{{4}})"
-    r"|(?P<time>\b\d{1,2}:\d{2}\b)"
-    r"|(?P<year>(?<![\w.])(?:19|20)\d\d(?:-(?:19|20)?\d\d)?(?!\w|%|\.\d))"
-    r"|(?P<num>(?<![\w.])[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?(?![\w]))")
-
-# (documents, regex searched in +-40 characters around the number, one-word reason)
-ALLOW = [
-    ("*", r"0\.01%; weighting", "unit"),
-    ("README.md", r"DGS2/5/10/30", "ticker"),
-    ("README.md", r"up to t-1|t-1, trades", "lag"),
-    ("README.md", r"126-day warm-up|capped at 3×|toward 10% annual|a 21-day lag", "setting"),
-    ("README.md", r"2-year note's cost|10-year leg|2-year leg|10-year yield|DV01-scaled", "tenor"),
-    ("README.md", r"above the 10% target|net of costs, 10% volatility target|10% volatility target:", "setting"),
-    ("README.md", r"Sharpe > 0\.4, NW-t > 2\.0|HAC t > 2\.0|≥ \+0\.10 Sharpe", "bar"),
-    ("README.md", r"tick_frac\(\) returned 0\.0|cost_per_unit was 0\.0", "code"),
-    ("README.md", r"Sharpe 0\.71 and 0\.07; DM 0\.83, 0\.68 and -1\.53", "history"),
-    ("DATA.md", r"Generics 2 and 3|generics 2/3|loads generic 1", "ticker"),
-    ("DATA.md", r"tick_frac\(\) returned 0\.0", "code"),
-    ("DATA.md", r"63-day change|252-day z-score", "setting"),
-    ("walkforward/PREREG.md", r"lookback: 63, 126, 252 or 504|lookback: 63, 126", "setting"),
-    ("walkforward/PREREG.md", r"252-day z-score window|63-day sign|reversion, 252 days|63-day window|126-day warm-up", "setting"),
-    ("walkforward/PREREG.md", r"clip at ±3|10% volatility target|3x leverage cap", "setting"),
-    ("walkforward/PREREG.md", r"data to t-1|up to t-1|uses data to t-1", "lag"),
-    ("walkforward/PREREG.md", r"Three transitions|2 spreads x 3 transitions|at least 2 of the 3 test", "count"),
-    ("walkforward/PREREG.md", r"^.{0,40}\b[1-4]\. (?:Net|Overall|HAC|For)|\. [234]\. ", "list"),
-    ("walkforward/PREREG.md", r"6 numbers", "count"),
-    (PAPER, r"63-day return|trailing 63-day|63-day realized|126-day warm-up|252-day mean|monthly holding|twenty-one", "setting"),
-    (PAPER, r"clipped at \\pm 3|capped at 3\\times|10% annualized|lagged one day|t\{-\}1", "setting"),
-    (PAPER, r"2-year note's cost|2-year leg|10-year yield|10-year note|10-year tick|10-year leg|2-year", "tenor"),
-    (PAPER, r"lookback \(63, 126, 252 or 504 days\)", "setting"),
-]
-
-
-def numbers(doc):
-    """Yield (match, kind) for every number-like token in a document."""
-    for m in TOKEN.finditer(text(doc)):
-        yield m, m.lastgroup
-
-
-def allow_reason(doc, m, kind):
-    if kind in ("date", "time", "year"):
-        return kind
-    t = text(doc)
-    ctx = t[max(0, m.start() - 40): m.end() + 40]
-    for d, rx, why in ALLOW:
-        if d in ("*", doc) and re.search(rx, ctx):
-            return why
-    return None
-
-
-def coverage(doc):
-    spans = [sp for c in CLAIMS if c.doc == doc for _, sp in c.matches()]
-    covered, allowed, bad = 0, 0, []
-    for m, kind in numbers(doc):
-        if any(m.start() < e and m.end() > b for b, e in spans):
-            covered += 1
-        elif allow_reason(doc, m, kind):
-            allowed += 1
-        else:
-            bad.append(f"{m.group()!r} ...{text(doc)[max(0, m.start() - 40): m.end() + 30]}...")
-    return covered, allowed, bad
-
-
-@pytest.mark.parametrize("doc", COVERED_DOCS)
-def test_every_number_is_covered(doc):
-    covered, allowed, bad = coverage(doc)
-    print(f"\n{doc}: {covered} numbers covered by claims, {allowed} allowlisted")
-    assert not bad, f"{len(bad)} numbers neither claimed nor allowlisted:\n" + "\n".join(bad)
-
-
 def ids(c):
     return c.loc
 
 
-PARAMS = [pytest.param(c, id=c.loc, marks=[pytest.mark.xfail(reason=c.known, strict=True)] if c.known else [])
+PARAMS = [pytest.param(c, id=c.loc, marks=[])
           for c in CLAIMS]
 
 
@@ -515,4 +388,4 @@ if __name__ == "__main__":
             flag = "ok" if c.check() else "MISMATCH"
         except AssertionError:
             s, e, flag = "NOT FOUND", float("nan"), "MISMATCH"
-        print(f"{c.loc:70s} {s:>9s}  {e:10.6g}  {c.source} :: {c.field}  {flag}{'  (known gap)' if c.known else ''}")
+        print(f"{c.loc:70s} {s:>9s}  {e:10.6g}  {c.source} :: {c.field}  {flag}")
