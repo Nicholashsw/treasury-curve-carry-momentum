@@ -18,7 +18,7 @@ published pipeline does not open those inputs. The repository name still reads
 ## What I built
 
 - Continuous futures series for six Treasury contracts (TU, FV, TY, UXY, US, WN), rebuilt from the
-  exchange roll map (`FUT_CUR_GEN_TICKER`) with difference back-adjustment, so roll gaps are not
+  Bloomberg roll map (`FUT_CUR_GEN_TICKER`) with difference back-adjustment, so roll gaps are not
   booked as returns.
 - DV01-neutral spread books. DV01 is how many dollars a position gains or loses when yields move
   by 0.01%; weighting each leg so the DV01s cancel leaves a book that does not care whether rates

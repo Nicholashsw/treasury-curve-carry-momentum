@@ -5,7 +5,7 @@ All sources are FREE and public, so the study is reproducible by anyone:
   US       FRED constant-maturity (DGS2/5/10/30)
   Germany  Bundesbank BBSIS Svensson-fitted par yields (daily)
   Japan    Japan MoF daily JGB yield curve (full history)
-  FX       FRED daily spot
+  FX       ECB Data Portal (USD/EUR, JPY/EUR) and Bank of Canada Valet (USD/CAD)
 
 Deliberately NOT used here:
   * FRED IRLTLT01* international long rates -- MONTHLY, unusable for daily pairs

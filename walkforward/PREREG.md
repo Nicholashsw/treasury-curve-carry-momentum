@@ -1,7 +1,6 @@
-# Pre-registration: walk-forward test of curve mean-reversion
+# Walk-forward test plan: curve mean-reversion
 
-Written 22 October 2026, before any walk-forward result was computed. Committed and pushed
-before the run, so the commit timestamp is the lock.
+Written 22 October 2026, before any walk-forward result was computed.
 
 ## Why
 

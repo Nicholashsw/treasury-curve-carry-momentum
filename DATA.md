@@ -58,7 +58,7 @@ globbed only `<root>1_STATIC*.csv`, which never matched the exported
 series reported as `net` was identical to `gross`. The glob now matches both spellings
 and the published table is genuinely net of one tick per contract per side. Full
 before/after figures are in the README's
-[Correction](README.md#correction-2026-08-23) and [Erratum](README.md#erratum) sections.
+[Correction](README.md#correction-2026-08-23) section.
 
 ## How the original inputs were produced
 
