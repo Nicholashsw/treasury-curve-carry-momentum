@@ -162,14 +162,6 @@ describes the regime it was found in and does not predict the next one. Details 
 Limitation: daily closes are asynchronous across Tokyo, Europe and New York; weekly sampling is the
 fix.
 
-## What I learned
-
-<!-- TODO Nick: three bullets in your own words. -->
-
-- 
-- 
-- 
-
 ## How to run
 
 ```bash
