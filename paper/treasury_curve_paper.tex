@@ -26,15 +26,16 @@ between levels and spreads: outright duration exhibits trend, so a time-series
 momentum strategy earns a net Sharpe ratio of 0.68, whereas the yield-curve
 slope exhibits mean-reversion. A naive momentum signal applied to the 2s10s
 slope is empirically duration-neutral yet loses money (net Sharpe $-0.79$),
-while the same book driven by a mean-reversion signal earns 0.71. Two curve
+while the same book driven by a mean-reversion signal earns 0.72. Two curve
 mean-reversion strategies (2s10s and 5s30s) perform comparably to the
 outright-momentum baseline but do not statistically dominate it, and a
 2s5s10s butterfly does not earn its risk. All results are net of transaction
-costs and scaled to a common volatility target. We discuss the methodological
-requirements---roll reconstruction, DV01 hedging, and leakage-free
-backtesting---that materially affect these conclusions, and we are explicit
-about the out-of-sample validation still required before the curve results can
-be treated as a hard performance claim.
+costs and scaled to a common volatility target. A walk-forward test, which fits
+the signal direction and lookback in one policy regime and trades them in the
+next, gives pooled out-of-sample net Sharpe ratios of 0.87 for 2s10s and 0.69
+for 5s30s over 2015--2026. We discuss the methodological requirements---roll
+reconstruction, DV01 hedging, and leakage-free backtesting---that materially
+affect these conclusions.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -66,14 +67,12 @@ of getting that distinction wrong.
 \section{Data}
 All series are daily Bloomberg exports covering January 2010 to July 2026,
 inner-joined onto the trading calendar of the front 10-year note future,
-yielding approximately 4{,}160 observations. The dataset comprises: the
+yielding an aligned panel of 4{,}173 rows. The dataset comprises: the
 constant-maturity cash Treasury curve (3M, 6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 20Y,
-30Y); the SOFR/OIS and (legacy) swap curves together with Fed funds futures and
-the policy target rate for the macro overlay; and the futures complex itself
-across six roots---2Y (ZT), 5Y (ZF), 10Y (ZN), Ultra 10Y (TN), classic Bond
-(ZB), and Ultra Bond (UB)---each with the first three generic contracts and
-per-contract static specifications. The MOVE index, VIX, and 10-year breakeven
-inflation complete the volatility and macro controls.
+30Y); the front generic contract of six futures roots---2Y (ZT), 5Y (ZF), 10Y
+(ZN), Ultra 10Y (TN), classic Bond (ZB), and Ultra Bond (UB)---each with its
+roll map, daily forward DV01 and per-contract static specifications; and the
+MOVE index for the volatility regime control.
 
 Three data-handling issues materially affect correctness and are addressed
 explicitly in the pipeline. First, Bloomberg stamps prior values on
@@ -127,9 +126,10 @@ $t$ settlement. Rebalancing is monthly. Each book is scaled toward a 10\%
 annualized volatility target using 63-day realized volatility, with leverage
 capped at $3\times$ and a 126-day warm-up before any position is taken, so that
 a small early-sample volatility estimate cannot inflate the book. Transaction
-costs are charged at one tick per contract per side, using the per-contract tick
-size from the static specifications (the 10-year tick, for example, was halved
-over the sample, which the per-contract data captures).
+costs are charged at one tick per contract per side, using each root's most
+recent tick size and settle price from the static specifications for the whole
+sample. This understates the 2-year note's cost before 2019, when its tick was
+twice as large; the other contracts' ticks did not change during the sample.
 
 \subsection{Evaluation}
 We report the annualized Sharpe ratio (net of costs), maximum drawdown, and
@@ -152,7 +152,7 @@ The paper's central result is summarized in Fig.~\ref{fig:signal}. The 2s10s
 book is constructed identically in both lines---long the 10-year leg, short a
 DV01-scaled 2-year leg---and differs only in the signal that sizes it. Driven
 by momentum, the book returns a net Sharpe of $-0.79$; driven by
-mean-reversion, it returns $0.71$. Because the book is empirically
+mean-reversion, it returns $0.72$. Because the book is empirically
 duration-neutral, this gap is not a hedging artifact: it reflects the curve's
 tendency to revert rather than trend. Applying the outright-momentum recipe to
 the curve is, over this sample, a systematic way to lose money.
@@ -162,7 +162,7 @@ the curve is, over this sample, a systematic way to lose money.
 \includegraphics[width=\columnwidth]{fig1_signal_contrast.png}
 \caption{The 2s10s DV01-neutral book under two signals. The book is identical;
 only the signal differs. Momentum loses (net Sharpe $-0.79$); mean-reversion
-earns (net Sharpe $0.71$). The book's P\&L has near-zero sensitivity to the
+earns (net Sharpe $0.72$). The book's P\&L has near-zero sensitivity to the
 10-year yield, so the difference is signal, not hedge error.}
 \label{fig:signal}
 \end{figure}
@@ -171,8 +171,8 @@ earns (net Sharpe $0.71$). The book's P\&L has near-zero sensitivity to the
 Table~\ref{tab:results} reports the four pre-specified strategies with the
 signal appropriate to each exposure, and Fig.~\ref{fig:equity} shows their net
 cumulative performance. Outright duration momentum and the two curve
-mean-reversion trades cluster in a Sharpe range of $0.66$ to $0.71$ with
-drawdowns of roughly 20--27\%. The 2s5s10s butterfly is weak (Sharpe $0.07$) and
+mean-reversion trades cluster in a Sharpe range of $0.66$ to $0.72$ with
+drawdowns of roughly 20--27\%. The 2s5s10s butterfly is weak (Sharpe $0.08$) and
 carries the largest drawdown; on the evidence here it does not earn its place.
 
 \begin{table}[t]
@@ -184,9 +184,9 @@ carries the largest drawdown; on the evidence here it does not earn its place.
 Strategy & Sharpe & Max DD & Turnover/yr \\
 \midrule
 Duration momentum (baseline) & 0.68 & $-23\%$ & 22 \\
-2s10s mean-reversion         & 0.71 & $-20\%$ & 104 \\
-5s30s mean-reversion         & 0.66 & $-27\%$ & 68 \\
-2s5s10s butterfly            & 0.07 & $-38\%$ & 87 \\
+2s10s mean-reversion         & 0.72 & $-20\%$ & 104 \\
+5s30s mean-reversion         & 0.66 & $-27\%$ & 67 \\
+2s5s10s butterfly            & 0.08 & $-38\%$ & 87 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -203,15 +203,41 @@ together; the butterfly is flat to negative.}
 \subsection{Does the curve add to the baseline?}
 Relative to the outright-momentum baseline, the HAC Diebold--Mariano statistics
 for the 2s10s and 5s30s mean-reversion trades are positive but small
-($\mathrm{DM}=0.83$, $p=0.41$ and $\mathrm{DM}=0.68$, $p=0.49$), corresponding to
+($\mathrm{DM}=0.84$, $p=0.40$ and $\mathrm{DM}=0.69$, $p=0.49$), corresponding to
 an annualized return edge of about $2.9\%$ and $2.7\%$ that is not statistically
-distinguishable from zero; the butterfly is negative ($\mathrm{DM}=-1.53$,
+distinguishable from zero; the butterfly is negative ($\mathrm{DM}=-1.52$,
 $p=0.13$). We therefore do not claim that the curve trades outperform the
 baseline: they are
 comparable but not statistically distinguishable from it under this test. The
 honest reading is that outright duration momentum is the workhorse, curve
 mean-reversion is a legitimate and roughly co-equal source of return, and the
 butterfly is not supported.
+
+\subsection{Walk-forward test}
+The mean-reversion direction for the curve was first confirmed on the full
+sample. The walk-forward test fits the direction (mean-reversion or momentum)
+and the z-score lookback (63, 126, 252 or 504 days) in one policy regime and
+trades them in the next, over four regimes: 2010--2014, 2015--2019, 2020--2021
+and 2022--2026. Mean-reversion was chosen in all six fits. Table~\ref{tab:wf}
+reports the net Sharpe ratio of each fitted candidate in its test regime.
+Duration momentum earns 0.74 on the same 2015--2026 dates. The
+Diebold--Mariano statistic against it is 0.95 ($p=0.34$) for 2s10s and 0.61
+($p=0.54$) for 5s30s. The carry study was pre-registered; the walk-forward test
+was not.
+
+\begin{table}[t]
+\caption{Walk-forward net Sharpe, by test regime}
+\label{tab:wf}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Spread & 2015--2019 & 2020--2021 & 2022--2026 & Pooled \\
+\midrule
+2s10s & 0.89 & 0.92 & 0.85 & 0.87 \\
+5s30s & 0.77 & 1.28 & 0.38 & 0.69 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Macro regime overlay}
 As a control and as an exportable input to a separate FX-volatility project, we
@@ -224,20 +250,17 @@ real-time signal would require out-of-sample validation of its own.
 \section{Discussion and Limitations}
 Two caveats bound the strength of these conclusions. \emph{First}, the decision
 to use mean-reversion rather than momentum for the curve is economically
-motivated but was confirmed on the full sample; a single full-sample sign is not
-proof, and a walk-forward, out-of-sample test is required before the curve
-results are treated as a hard performance claim. \emph{Second}, the study is
-single-country and single-currency; the cost model, while contract-specific, is
-a flat tick-per-side approximation that omits market impact and financing.
-Neither is expected to reverse the qualitative level-versus-spread finding, but
-the out-of-sample validation of the curve-signal direction is the dominant open
-item and is what would move the curve results from suggestive to established.
+motivated and was first confirmed on the full sample; the walk-forward test
+above checks it out of sample, and it was not pre-registered. \emph{Second},
+the study is single-country and single-currency; the cost model is a flat
+tick-per-side approximation that omits market impact and financing, and it
+understates the 2-year note's cost before 2019.
 
 \section{Conclusion}
 On U.S. Treasury futures over 2010--2026, outright duration trends and the yield
 curve mean-reverts. A momentum overlay that is correct for the former is
 actively wrong for the latter: an identically-hedged, duration-neutral 2s10s
-book loses at a Sharpe of $-0.79$ under momentum and earns $0.71$ under
+book loses at a Sharpe of $-0.79$ under momentum and earns $0.72$ under
 mean-reversion. Matching each signal to its exposure yields three viable
 strategies near a Sharpe of $0.7$; the curve trades are comparable to, but do
 not dominate, the outright-momentum baseline, and a butterfly is not supported.

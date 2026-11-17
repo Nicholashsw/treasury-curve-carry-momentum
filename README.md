@@ -168,6 +168,8 @@ fix.
 pip install -r requirements.txt
 BBG_CSV=/path/to/your/csv/exports BBG_RESULTS=./results jupyter nbconvert --to notebook --execute notebooks/treasury_curve_pipeline.ipynb
 BBG_CSV=/path/to/your/csv/exports BBG_RESULTS=./results python scripts/make_figures.py
+BBG_CSV=/path/to/your/csv/exports BBG_RESULTS=/tmp/scratch python scripts/make_results.py
+pytest tests/test_claims.py
 ```
 
 Set both environment variables. `BBG_CSV` is the folder holding your CSV exports, `BBG_RESULTS`
@@ -191,8 +193,10 @@ yourself you need terminal access, or the free-data route in `DATA.md`.
 ```
 notebooks/   treasury_curve_pipeline.ipynb   runs top-to-bottom from a folder of CSVs
 scripts/     make_figures.py                 redraws the figures from that same run
+             make_results.py                 writes results/headline_metrics.csv (aggregates only)
+tests/       test_claims.py                  checks every number in the docs and the paper against results files
 paper/       IEEE-format paper (PDF + LaTeX source)
-results/     figures
+results/     figures and headline_metrics.csv
 bloomberg/   VBA exporters and the export checklist (how to pull the inputs yourself)
 carry/       carry extension: protocol, results, figures and reproduction code
 walkforward/ regime walk-forward of the curve signals: plan, code and result tables

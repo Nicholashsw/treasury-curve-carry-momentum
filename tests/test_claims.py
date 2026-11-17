@@ -378,17 +378,54 @@ for c in CLAIMS:
         c.known = HIST
 
 
+PAPER = "paper/treasury_curve_paper.tex"
+# ---------------------------------------------------------------- paper/treasury_curve_paper.tex
+T = "paper/treasury_curve_paper.tex"
+row("2s10s momentum Sharpe (every use)", T, r"(?<![\d.])(-0\.79)(?!\d)", [hmx("2s10s_momentum_signal", "sharpe")], every=True)
+row("2s10s reversion Sharpe (every use)", T, r"(?<![\d.-])(0\.72)(?!\d)", [hmx("2s10s_reversion", "sharpe")], every=True)
+row("duration momentum Sharpe (every use)", T, r"(?<![\d.-])(0\.68)(?!\d)", [hmx("DurationMomentum", "sharpe")], every=True)
+row("5s30s Sharpe (every use)", T, r"(?<![\d.-])(0\.66)(?!\d)", [hmx("5s30s_reversion", "sharpe")], every=True)
+row("butterfly Sharpe (every use)", T, r"(?<![\d.-])(0\.08)(?!\d)", [hmx("2s5s10s_fly", "sharpe")], every=True)
+row("walk-forward pooled (abstract)", T, r"net Sharpe ratios of (0\.87) for 2s10s and (0\.69) for 5s30s",
+    [wfp("2s10s", "oos_sharpe"), wfp("5s30s", "oos_sharpe")])
+row("panel rows", T, r"aligned panel of (4,173) rows", [hmx("sample", "n_rows")])
+row("Sharpe range", T, r"Sharpe range of (0\.66) to (0\.72) with drawdowns of roughly (20)-(27)%",
+    [(HM, "min sharpe of curve books", lambda: min(csv(HM).query("field == 'sharpe'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])),
+     (HM, "max sharpe of curve books", lambda: max(csv(HM).query("field == 'sharpe'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])),
+     (HM, "min |maxdd| of curve books", lambda: min(abs(csv(HM).query("field == 'maxdd_pct'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"]))),
+     (HM, "max |maxdd| of curve books", lambda: max(abs(csv(HM).query("field == 'maxdd_pct'").set_index("name").loc[["2s10s_reversion", "5s30s_reversion"], "value"])))])
+for b, lab in zip(BOOKS, ["Duration momentum \\(baseline\\)", "2s10s mean-reversion", "5s30s mean-reversion", "2s5s10s butterfly"]):
+    row(f"results table {b}", T, lab + r" & (-?[\d.]+) & (-\d+)% & (\d+) \\\\",
+        [hmx(b, "sharpe"), (HM, f"{b}.maxdd_pct", hm(b, "maxdd_pct")), hmx(b, "turnover_per_yr")])
+row("DM", T, r"DM=([\d.]+), p=([\d.]+) and DM=([\d.]+), p=([\d.]+)\), corresponding to an annualized return edge of about ([\d.]+)% and ([\d.]+)%",
+    [hmx("2s10s_reversion", "dm"), hmx("2s10s_reversion", "dm_p"), hmx("5s30s_reversion", "dm"),
+     hmx("5s30s_reversion", "dm_p"), hmx("2s10s_reversion", "dm_edge_pct"), hmx("5s30s_reversion", "dm_edge_pct")])
+row("DM butterfly", T, r"butterfly is negative \(DM=(-[\d.]+), p=([\d.]+)\)", [hmx("2s5s10s_fly", "dm"), hmx("2s5s10s_fly", "dm_p")])
+row("duration beta", T, r"has a slope of (-[\d.]+), indistinguishable", [hmx("2s10s_reversion", "beta_to_10y_yield_chg")])
+row("regime days", T, r"stress state \((\d+) days\), a steepening state \((\d,\d+) days\), and a flattening state \((\d,\d+) days\)",
+    [hmx("regime_days", "stress"), hmx("regime_days", "steepening"), hmx("regime_days", "flattening")])
+row("walk-forward fits", T, r"chosen in all (\w+) fits",
+    [(WF_T, "count(direction == reversion)", lambda: (csv(WF_T)["direction"] == "reversion").sum())])
+row("walk-forward DM", T, r"Duration momentum earns ([\d.]+) on the same 2015-2026 dates.*?is ([\d.]+) \(p=([\d.]+)\) for 2s10s and ([\d.]+) \(p=([\d.]+)\) for 5s30s",
+    [wfp("2s10s", "duration_mom_sharpe"), wfp("2s10s", "dm_stat"), wfp("2s10s", "dm_p"), wfp("5s30s", "dm_stat"), wfp("5s30s", "dm_p")])
+for sp, rx in (("2s10s", r"2s10s & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\"),
+               ("5s30s", r"5s30s & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\")):
+    row(f"walk-forward table {sp}", T, rx, [wf(sp, 0, "oos_sharpe"), wf(sp, 1, "oos_sharpe"), wf(sp, 2, "oos_sharpe"), wfp(sp, "oos_sharpe")])
+row("conclusion Sharpe", T, r"strategies near a Sharpe of (0\.7);",
+    [(HM, "mean sharpe of duration momentum and the two curve spreads",
+      lambda: csv(HM).query("field == 'sharpe'").set_index("name").loc[["DurationMomentum", "2s10s_reversion", "5s30s_reversion"], "value"].mean())])
+
+
 # ---------------------------------------------------------------- coverage
 # Every number in these documents must be covered by a claim above or be allowlisted with a one-word
 # reason. CARRY_RESULTS.md and cross_country/FINDINGS.md have their tables claim-checked above but are
 # not coverage-checked (their prose carries several hundred more numbers).
-PAPER = "paper/treasury_curve_paper.tex"
 COVERED_DOCS = ["README.md", "DATA.md", "walkforward/PREREG.md", PAPER]
 MONTH = r"(?:January|February|March|April|May|June|July|August|September|October|November|December)"
 TOKEN = re.compile(
     rf"(?P<date>\d{{4}}-\d{{2}}-\d{{2}}|\d{{1,2}} {MONTH}(?: \d{{4}})?|{MONTH} \d{{4}})"
     r"|(?P<time>\b\d{1,2}:\d{2}\b)"
-    r"|(?P<year>(?<![\w.])(?:19|20)\d\d(?:-(?:19|20)?\d\d)?(?![\w.%]))"
+    r"|(?P<year>(?<![\w.])(?:19|20)\d\d(?:-(?:19|20)?\d\d)?(?!\w|%|\.\d))"
     r"|(?P<num>(?<![\w.])[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?(?![\w]))")
 
 # (documents, regex searched in +-40 characters around the number, one-word reason)
@@ -412,6 +449,10 @@ ALLOW = [
     ("walkforward/PREREG.md", r"Three transitions|2 spreads x 3 transitions|at least 2 of the 3 test", "count"),
     ("walkforward/PREREG.md", r"^.{0,40}\b[1-4]\. (?:Net|Overall|HAC|For)|\. [234]\. ", "list"),
     ("walkforward/PREREG.md", r"6 numbers", "count"),
+    (PAPER, r"63-day return|trailing 63-day|63-day realized|126-day warm-up|252-day mean|monthly holding|twenty-one", "setting"),
+    (PAPER, r"clipped at \\pm 3|capped at 3\\times|10% annualized|lagged one day|t\{-\}1", "setting"),
+    (PAPER, r"2-year note's cost|2-year leg|10-year yield|10-year note|10-year tick|10-year leg|2-year", "tenor"),
+    (PAPER, r"lookback \(63, 126, 252 or 504 days\)", "setting"),
 ]
 
 
